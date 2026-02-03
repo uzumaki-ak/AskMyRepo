@@ -5,12 +5,52 @@ import useProject from "~/hooks/use-project";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import { TfiUnlink } from "react-icons/tfi";
+import { Button } from "~/components/ui/button";
+import { toast } from "sonner";
+import useRefetch from "~/hooks/use-refetch";
 
 const CommitLog = () => {
   const { projectId, project } = useProject();
-  const { data: commits } = api.project.getCommits.useQuery({ projectId });
+  const { data: commits } = api.project.getCommits.useQuery(
+    { projectId },
+    { enabled: !!projectId },
+  );
+  const refetch = useRefetch();
+  const resummarize = api.project.resummarizeCommits.useMutation();
+
+  const handleResummarize = () => {
+    if (!project?.id) return;
+    resummarize.mutate(
+      { projectId: project.id },
+      {
+        onSuccess: (data) => {
+          const msg = data.stoppedForQuota
+            ? `Re-summarized ${data.updated} of ${data.attempted} (stopped for quota)`
+            : `Re-summarized ${data.updated} of ${data.attempted} commits`;
+          toast.success(msg);
+          refetch();
+        },
+        onError: () => {
+          toast.error("Failed to re-summarize commits");
+        },
+      },
+    );
+  };
   return (
     <>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-zinc-700">
+          Recent commits
+        </h2>
+        <Button
+          type="button"
+          onClick={handleResummarize}
+          disabled={!project?.id || resummarize.isPending}
+          className="h-8"
+        >
+          {resummarize.isPending ? "Re-summarizing..." : "Re-summarize failed"}
+        </Button>
+      </div>
       <ul className="space-y-8">
         {commits?.map((commit, commitIndx) => {
           return (

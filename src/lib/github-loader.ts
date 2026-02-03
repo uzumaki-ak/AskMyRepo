@@ -6,7 +6,7 @@ import { db } from '~/server/db'
 
 export const loadGithubRepo = async(githubUrl: string, githubToken?:string) => {
 const loader = new GithubRepoLoader(githubUrl, {
-  accessToken: githubToken || '',
+  accessToken: githubToken || process.env.GITHUB_TOKEN || '',
   ignoreFiles: ['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml', 'bun.lockb'],
   recursive: true,
   unknown: 'warn',
@@ -17,8 +17,6 @@ const loader = new GithubRepoLoader(githubUrl, {
 const docs = await loader.load()
 return docs
 }
-
-console.log(await loadGithubRepo('https://github.com/uzumaki-ak/fronted-for-traffic'));
 
 
 export const indexGithubRepo = async(projectId: string ,githubUrl:string, githubToken?: string) => {

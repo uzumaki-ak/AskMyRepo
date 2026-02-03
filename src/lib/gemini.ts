@@ -5,8 +5,10 @@ import type { Document } from "@langchain/core/documents";
 
 // Initialize outside the function so it's reused across calls
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const model = genAI.getGenerativeModel({
-  model: "gemini-1.5-flash",
+const textModelName =
+  process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const textModel = genAI.getGenerativeModel({
+  model: textModelName,
 });
 
 export const aiSummariseCommit = async (diff: string): Promise<string> => {
@@ -43,7 +45,7 @@ export const aiSummariseCommit = async (diff: string): Promise<string> => {
       `Please summarize the following diff file: \n\n${diff}`,
     ];
 
-    const result = await model.generateContent(prompt);
+    const result = await textModel.generateContent(prompt);
     return result.response.text(); 
   } catch (error) {
     console.error("Failed to generate summary:", error);
@@ -58,7 +60,7 @@ export async function summariseCode(doc: Document) {
   console.log("gettin summary for", doc.metadata.source);
   try {
     const code = doc.pageContent.slice(0, 10000);
-  const response = await model.generateContent([
+  const response = await textModel.generateContent([
     `you are an intelligent senior software engineer who specializes in onboarding junior software engineeers onto projects`,
     `you are onboarding a junior software engineer and explaining to them the purpose of the
      ${doc.metadata.source} file
