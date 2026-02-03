@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import React from "react";
-import { SidebarProvider } from "~/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "~/components/ui/sidebar";
 import AppSidebar from "./app-sidebar";
 
 const UserButton = dynamic(
@@ -21,6 +21,7 @@ const SidebarLayout = ({ children }: Props) => {
       <main className="m-2 w-full">
         <div className="border-sidebar-border bg-sidebar flex items-center gap-2 rounded-md border p-2 px-4 shadow">
           {/* <SearchBar />  */}
+          <SidebarTrigger className="md:hidden" />
           <div className="ml-auto"></div>
           <UserButton />
         </div>
