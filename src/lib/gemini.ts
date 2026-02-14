@@ -10,6 +10,8 @@ const textModelName =
 const textModel = genAI.getGenerativeModel({
   model: textModelName,
 });
+const embeddingModelName =
+  process.env.GEMINI_EMBEDDING_MODEL || "text-embedding-004";
 
 export const aiSummariseCommit = async (diff: string): Promise<string> => {
   if (!diff.trim()) {
@@ -80,12 +82,21 @@ export async function summariseCode(doc: Document) {
 }
 
 export async function generateEmbedding(summary: string) {
-  const model = genAI.getGenerativeModel({
-    model: "text-embedding-004"
-  });
-  const result = await model.embedContent(summary);
-  const embedding = result.embedding;
-  return embedding.values;
+  if (!summary.trim()) {
+    return null;
+  }
+  const modelsToTry = [embeddingModelName, "embedding-001"];
+  for (const modelName of modelsToTry) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const result = await model.embedContent(summary);
+      const embedding = result.embedding;
+      return embedding.values;
+    } catch (error) {
+      console.error(`Embedding failed for model ${modelName}:`, error);
+    }
+  }
+  return null;
 }
 
 // console.log(await generateEmbedding("hey"));

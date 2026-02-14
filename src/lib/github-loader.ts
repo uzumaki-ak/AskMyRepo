@@ -34,11 +34,13 @@ await Promise.allSettled(allEmbeddings.map(async(embedding, index) => {
     }
   })
 
-  await db.$executeRaw`
-  UPDATE "SourceCodeEmbedding"
-  SET "summaryEmbedding" = ${embedding.embedding}::vector
-  WHERE "id" = ${sourceCodeEmbedding.id}
-  `
+  if (embedding.embedding?.length) {
+    await db.$executeRaw`
+    UPDATE "SourceCodeEmbedding"
+    SET "summaryEmbedding" = ${embedding.embedding}::vector
+    WHERE "id" = ${sourceCodeEmbedding.id}
+    `
+  }
 }))
 }
 

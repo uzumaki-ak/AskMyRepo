@@ -8,6 +8,7 @@ import { TfiUnlink } from "react-icons/tfi";
 import Link from "next/link";
 import CommitLog from "./commit-log";
 import AskQuesCard from "./ask-question-card";
+import ReadmeGeneratorCard from "./readme-generator-card";
 
 const Dashboard = () => {
   const { project } = useProject();
@@ -43,7 +44,7 @@ const Dashboard = () => {
       <div className="mt-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-5">
           <AskQuesCard />
-          meeting card
+          <ReadmeGeneratorCard variant="compact" />
         </div>
       </div>
       <div className="mt-8"></div>

@@ -13,17 +13,21 @@ export async function askQuestion(question: string, projectID:string){
 const stream = createStreamableValue()
 
 const queryVector = await generateEmbedding(question)
-const vectorQuery = `[${queryVector.join(',')}]`
-
-let result = await db.$queryRaw`
-SELECT "fileName", "sourceCode", "summary", 
-1 - ("summaryEmbedding" <=> ${vectorQuery}::vector) as similarity
-FROM "SourceCodeEmbedding"
-WHERE "summaryEmbedding" IS NOT NULL
-AND "projectId" = ${projectID}
-ORDER BY "summaryEmbedding" <=> ${vectorQuery}::vector
-LIMIT 10
-` as {fileName: string, sourceCode: string, summary: string, similarity: number}[]
+let result: {fileName: string, sourceCode: string, summary: string, similarity: number}[] = []
+if (queryVector?.length) {
+  const vectorQuery = `[${queryVector.join(',')}]`
+  result = await db.$queryRaw`
+  SELECT "fileName", "sourceCode", "summary", 
+  1 - ("summaryEmbedding" <=> ${vectorQuery}::vector) as similarity
+  FROM "SourceCodeEmbedding"
+  WHERE "summaryEmbedding" IS NOT NULL
+  AND "projectId" = ${projectID}
+  ORDER BY "summaryEmbedding" <=> ${vectorQuery}::vector
+  LIMIT 10
+  ` as {fileName: string, sourceCode: string, summary: string, similarity: number}[]
+} else {
+  console.warn("Embedding unavailable; falling back to keyword search.")
+}
 
   const stopwords = new Set([
     "the","is","a","an","and","or","to","of","in","on","for","with","where",

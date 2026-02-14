@@ -56,6 +56,7 @@
 
 import { z } from "zod";
 import { createTRPCRouter, privateProcedure, publicProcedure } from "../trpc";
+import { TRPCError } from "@trpc/server";
 import { pollCommits, summariseCommit } from "~/lib/github";
 import { indexGithubRepo } from "~/lib/github-loader";
 
@@ -175,4 +176,34 @@ export const projectRouter = createTRPCRouter({
       stoppedForQuota,
     }
   }),
+  deleteProject: privateProcedure
+    .input(z.object({ projectId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const project = await ctx.db.project.findFirst({
+        where: {
+          id: input.projectId,
+          userToProjects: {
+            some: {
+              userId: ctx.user.userId,
+            },
+          },
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+
+      if (!project) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Project not found",
+        });
+      }
+
+      await ctx.db.project.update({
+        where: { id: input.projectId },
+        data: { deletedAt: new Date() },
+      });
+
+      return { success: true };
+    }),
 })

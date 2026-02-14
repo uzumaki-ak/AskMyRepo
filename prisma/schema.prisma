@@ -11,16 +11,18 @@ datasource db {
 }
 
 model User {
-    id             String          @id @default(cuid())
-    createdAt      DateTime        @default(now())
-    updatedAt      DateTime        @updatedAt
-    imageUrl       String?
-    firstName      String?
-    lastName       String?
-    emailAddress   String?         @unique
-    credits        Int             @default(3000)
-    userToProjects UserToProject[]
-    savedQuestions SavedQuestion[]
+    id               String            @id @default(cuid())
+    createdAt        DateTime          @default(now())
+    updatedAt        DateTime          @updatedAt
+    imageUrl         String?
+    firstName        String?
+    lastName         String?
+    emailAddress     String?           @unique
+    credits          Int               @default(3000)
+    userToProjects   UserToProject[]
+    savedQuestions   SavedQuestion[]
+    apiKeys          UserApiKey[]
+    generatedReadmes GeneratedReadme[]
 }
 
 model Project {
@@ -34,6 +36,7 @@ model Project {
     commits              Commit[]
     sourceCodeEmbeddings SourceCodeEmbedding[]
     savedQuestions       SavedQuestion[]
+    generatedReadmes     GeneratedReadme[]
 }
 
 model UserToProject {
@@ -73,14 +76,45 @@ model Commit {
 }
 
 model SavedQuestion {
-    id            String   @id @default(cuid())
-    createdAt     DateTime @default(now())
-    updatedAt     DateTime @updatedAt
-    userId        String
-    projectId     String
-    question      String
-    answer        String
+    id             String   @id @default(cuid())
+    createdAt      DateTime @default(now())
+    updatedAt      DateTime @updatedAt
+    userId         String
+    projectId      String
+    question       String
+    answer         String
     fileReferences Json
-    user          User     @relation(fields: [userId], references: [id])
-    project       Project  @relation(fields: [projectId], references: [id])
+    user           User     @relation(fields: [userId], references: [id])
+    project        Project  @relation(fields: [projectId], references: [id])
+}
+
+// User API Keys for multiple LLM providers
+model UserApiKey {
+    id        String   @id @default(cuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    userId    String
+    provider  String // "groq", "google", "euron", "openrouter", "mistral", "openai"
+    apiKey    String // Encrypted API key
+    isActive  Boolean  @default(true)
+    user      User     @relation(fields: [userId], references: [id])
+
+    @@unique([userId, provider])
+}
+
+// Generated READMEs for projects
+model GeneratedReadme {
+    id             String   @id @default(cuid())
+    createdAt      DateTime @default(now())
+    updatedAt      DateTime @updatedAt
+    userId         String
+    projectId      String
+    content        String // The generated README markdown content
+    prompt         String? // Custom prompt used for generation
+    includeMermaid Boolean  @default(false) // Whether to include mermaid diagrams
+    model          String? // Which model was used for generation
+    user           User     @relation(fields: [userId], references: [id])
+    project        Project  @relation(fields: [projectId], references: [id])
+
+    @@unique([userId, projectId])
 }

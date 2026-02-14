@@ -1,9 +1,12 @@
 import {
   BotIcon,
   CreditCardIcon,
+  FileTextIcon,
+  KeyIcon,
   LayoutDashboardIcon,
   PlusCircleIcon,
   PresentationIcon,
+  Trash2,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -18,12 +21,30 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   useSidebar,
 } from "~/components/ui/sidebar";
 import useProject from "~/hooks/use-project";
 import { cn } from "~/lib/utils";
+import { ApiKeySettings } from "~/components/api-key-settings";
+import { api } from "~/trpc/react";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "~/components/ui/alert-dialog";
 
 const sideBarItems = [
   {
@@ -52,6 +73,24 @@ const AppSidebar = () => {
   const pathname = usePathname();
   const { open } = useSidebar();
   const { projects, projectId, setProjectId } = useProject();
+  const utils = api.useUtils();
+  const { data: readmeData } = api.readme.get.useQuery(
+    { projectId: projectId ?? "" },
+    { enabled: !!projectId },
+  );
+  const hasReadme = !!readmeData?.content;
+  const deleteProject = api.project.deleteProject.useMutation({
+    onSuccess: async (_data, variables) => {
+      toast.success("Project deleted");
+      await utils.project.getProjects.invalidate();
+      if (projectId === variables.projectId) {
+        setProjectId("");
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to delete project");
+    },
+  });
   return (
     <Sidebar collapsible="icon" variant="floating">
       <SidebarHeader>
@@ -114,6 +153,63 @@ const AppSidebar = () => {
                         <span>{project.name}</span>
                       </div>
                     </SidebarMenuButton>
+                    {open && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <SidebarMenuAction
+                            showOnHover
+                            onPointerDown={(event) => {
+                              event.stopPropagation();
+                            }}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                            }}
+                          >
+                            <Trash2 />
+                            <span className="sr-only">
+                              Delete {project.name}
+                            </span>
+                          </SidebarMenuAction>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete project</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will remove "{project.name}" from your
+                              dashboard. You can’t undo this action.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              disabled={deleteProject.isPending}
+                              onClick={() => {
+                                deleteProject.mutate({
+                                  projectId: project.id,
+                                });
+                              }}
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                    {open && project.id === projectId && hasReadme && (
+                      <SidebarMenuSub>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={pathname === "/readme"}
+                          >
+                            <Link href="/readme">
+                              <FileTextIcon />
+                              <span>README</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      </SidebarMenuSub>
+                    )}
                   </SidebarMenuItem>
                 );
               })}
@@ -125,6 +221,12 @@ const AppSidebar = () => {
                       <PlusCircleIcon /> Create Project
                     </Button>
                   </Link>
+                </SidebarMenuItem>
+              )}
+              <div className="h-2"></div>
+              {open && (
+                <SidebarMenuItem>
+                  <ApiKeySettings />
                 </SidebarMenuItem>
               )}
             </SidebarMenu>
