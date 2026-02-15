@@ -19,6 +19,7 @@ model User {
     lastName         String?
     emailAddress     String?           @unique
     credits          Int               @default(3000)
+    preferredProvider String?
     userToProjects   UserToProject[]
     savedQuestions   SavedQuestion[]
     apiKeys          UserApiKey[]
@@ -32,6 +33,12 @@ model Project {
     name                 String
     githubUrl            String
     deletedAt            DateTime?
+    embeddingStatus      String                @default("idle")
+    embeddingTotal       Int                   @default(0)
+    embeddingIndexed     Int                   @default(0)
+    embeddingLastError   String?
+    embeddingLastAttemptAt DateTime?
+    embeddingRetryCount  Int                   @default(0)
     userToProjects       UserToProject[]
     commits              Commit[]
     sourceCodeEmbeddings SourceCodeEmbedding[]

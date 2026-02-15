@@ -3,6 +3,7 @@
 import Image from "next/image";
 import React from "react";
 import { Button } from "~/components/ui/button";
+import { Badge } from "~/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import {
   Dialog,
@@ -17,6 +18,7 @@ import { readStreamableValue } from "ai/rsc";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
+import { Progress } from "~/components/ui/progress";
 
 const AskQuesCard = () => {
   const { project } = useProject();
@@ -31,21 +33,50 @@ const AskQuesCard = () => {
   const saveAnswer = api.question.save.useMutation();
   const { data: embeddingStatus } = api.project.getEmbeddingStatus.useQuery(
     { projectId: project?.id ?? "" },
-    { enabled: !!project?.id },
+    {
+      enabled: !!project?.id,
+      refetchInterval: (query) => {
+        const status = query.state.data?.status;
+        if (!status) return 0;
+        return status === "indexing" || status === "partial"
+          ? 5000
+          : 0;
+      },
+    },
   );
+  const utils = api.useUtils();
+  const reindexEmbeddings = api.project.reindexEmbeddings.useMutation({
+    onSuccess: async () => {
+      toast.success("Embeddings reindexed.");
+      await utils.project.getEmbeddingStatus.invalidate({
+        projectId: project?.id ?? "",
+      });
+    },
+    onError: (error) => {
+      toast.error(`Reindex failed: ${error.message}`);
+    },
+  });
   const warnedRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     if (!project?.id || !embeddingStatus) return;
     if (warnedRef.current === project.id) return;
     warnedRef.current = project.id;
-    if (!embeddingStatus.hasEmbeddings) {
+    if (embeddingStatus.status === "complete") {
+      toast.success(
+        `Embeddings ready (${embeddingStatus.indexed}/${embeddingStatus.total}).`,
+      );
+    } else if (embeddingStatus.status === "partial") {
+      toast.error(
+        `Embeddings partial (${embeddingStatus.indexed}/${embeddingStatus.total}). Reindex to finish.`,
+      );
+    } else if (embeddingStatus.status === "failed") {
+      toast.error(
+        "Embeddings failed. Please reindex or check your API key/model.",
+      );
+    } else if (!embeddingStatus.hasEmbeddings) {
       toast.error(
         "Embeddings not ready for this project yet. Ask will likely fail until indexing finishes.",
-      );
-    } else {
-      toast.success(
-        `Embeddings ready (${embeddingStatus.count} files indexed).`,
       );
     }
   }, [project?.id, embeddingStatus]);
@@ -94,6 +125,10 @@ const AskQuesCard = () => {
   };
 
   const tabsValue = filesRefrences[0]?.fileName;
+  const totalFiles = embeddingStatus?.total ?? 0;
+  const indexedFiles = embeddingStatus?.indexed ?? embeddingStatus?.count ?? 0;
+  const progressValue =
+    totalFiles > 0 ? Math.round((indexedFiles / totalFiles) * 100) : 0;
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -155,10 +190,58 @@ const AskQuesCard = () => {
         </DialogContent>
       </Dialog>
       <Card className="relative col-span-3">
-        <CardHeader>
+        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-orange-600">Ask A question</CardTitle>
+          <div className="flex flex-wrap items-center gap-2">
+            {embeddingStatus && (
+              <Badge
+                variant={
+                  embeddingStatus.status === "complete" ? "secondary" : "outline"
+                }
+              >
+                {embeddingStatus.status === "complete"
+                  ? `Indexed ${indexedFiles}/${totalFiles}`
+                  : embeddingStatus.status === "partial"
+                    ? `Partial ${indexedFiles}/${totalFiles}`
+                    : embeddingStatus.status === "failed"
+                      ? "Indexing failed"
+                      : embeddingStatus.status === "indexing"
+                        ? `Indexing ${indexedFiles}/${totalFiles}`
+                        : "Not indexed"}
+              </Badge>
+            )}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={
+                !project?.id ||
+                reindexEmbeddings.isPending ||
+                embeddingStatus?.status === "indexing"
+              }
+              onClick={() => {
+                if (!project?.id) return;
+                reindexEmbeddings.mutate({ projectId: project.id });
+              }}
+            >
+              {reindexEmbeddings.isPending ? "Reindexing..." : "Reindex Embeddings"}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
+          {embeddingStatus && totalFiles > 0 && (
+            <div className="mb-4 space-y-2">
+              <div className="text-muted-foreground text-xs">
+                Indexed {indexedFiles} of {totalFiles} files
+              </div>
+              <Progress value={progressValue} />
+              {embeddingStatus.lastError && (
+                <p className="text-xs text-red-600">
+                  {embeddingStatus.lastError}
+                </p>
+              )}
+            </div>
+          )}
           <form onSubmit={onSubmit}>
             <Textarea
               placeholder="which file should i edit to change her Feeling toward me?"

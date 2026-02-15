@@ -30,6 +30,7 @@ export const apiKeysRouter = createTRPCRouter({
       maxTokens: config.maxTokens,
       rateLimit: config.rateLimit,
       apiKeyEnv: config.apiKeyEnv,
+      supportsEmbeddings: !!config.supportsEmbeddings,
     }));
   }),
 
@@ -127,4 +128,38 @@ export const apiKeysRouter = createTRPCRouter({
       hasEnvKey: !!process.env[LLM_PROVIDERS[provider]!.apiKeyEnv],
     }));
   }),
+
+  // Get user's preferred provider (for chat + embeddings)
+  getPreference: privateProcedure.query(async ({ ctx }) => {
+    const user = await ctx.db.user.findUnique({
+      where: { id: ctx.user.userId },
+      select: { preferredProvider: true },
+    });
+    return { preferredProvider: user?.preferredProvider ?? null };
+  }),
+
+  // Set user's preferred provider (or clear it)
+  setPreference: privateProcedure
+    .input(
+      z.object({
+        provider: z.string().nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (input.provider && !validProviders.includes(input.provider)) {
+        throw new Error("Invalid provider");
+      }
+      if (
+        input.provider &&
+        !LLM_PROVIDERS[input.provider]?.supportsEmbeddings
+      ) {
+        throw new Error("Provider does not support embeddings in this app");
+      }
+      await ctx.db.user.upsert({
+        where: { id: ctx.user.userId },
+        update: { preferredProvider: input.provider },
+        create: { id: ctx.user.userId, preferredProvider: input.provider },
+      });
+      return { preferredProvider: input.provider };
+    }),
 });

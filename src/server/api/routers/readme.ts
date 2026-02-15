@@ -76,6 +76,11 @@ export const readmeRouter = createTRPCRouter({
       for (const key of userApiKeys) {
         apiKeyMap[key.provider] = key.apiKey;
       }
+      const userPref = await ctx.db.user.findUnique({
+        where: { id: ctx.user.userId },
+        select: { preferredProvider: true },
+      });
+      const preferredProvider = userPref?.preferredProvider ?? undefined;
 
       // Build context from embeddings (summaries, not full code)
       const contextParts = project.sourceCodeEmbeddings.map(
@@ -89,6 +94,8 @@ export const readmeRouter = createTRPCRouter({
         customPrompt: input.customPrompt,
         includeMermaid: input.includeMermaid,
         includeArchitecture: input.includeArchitecture,
+        preferredProvider,
+        strictProvider: Boolean(preferredProvider),
       });
 
       // Save to database
@@ -183,6 +190,11 @@ export const readmeRouter = createTRPCRouter({
         for (const key of userApiKeys) {
           apiKeyMap[key.provider] = key.apiKey;
         }
+        const userPref = await ctx.db.user.findUnique({
+          where: { id: ctx.user.userId },
+          select: { preferredProvider: true },
+        });
+        const preferredProvider = userPref?.preferredProvider ?? undefined;
 
         // Build context
         const contextParts = project.sourceCodeEmbeddings.map(
@@ -196,6 +208,8 @@ export const readmeRouter = createTRPCRouter({
           customPrompt: input.customPrompt,
           includeMermaid: input.includeMermaid,
           includeArchitecture: input.includeArchitecture,
+          preferredProvider,
+          strictProvider: Boolean(preferredProvider),
         });
 
         // Update existing record
@@ -278,6 +292,11 @@ export const readmeRouter = createTRPCRouter({
       for (const key of userApiKeys) {
         apiKeyMap[key.provider] = key.apiKey;
       }
+      const userPref = await ctx.db.user.findUnique({
+        where: { id: ctx.user.userId },
+        select: { preferredProvider: true },
+      });
+      const preferredProvider = userPref?.preferredProvider ?? undefined;
 
       // Build context
       const contextParts = project.sourceCodeEmbeddings.map(
@@ -289,7 +308,11 @@ export const readmeRouter = createTRPCRouter({
         context,
         project.name,
         input.diagramType ?? "architecture",
-        { userApiKeys: apiKeyMap }
+        {
+          userApiKeys: apiKeyMap,
+          preferredProvider,
+          strictProvider: Boolean(preferredProvider),
+        }
       );
 
       return {

@@ -8,6 +8,7 @@ export interface LLMProvider {
   models: string[];
   maxTokens: number;
   rateLimit: number; // requests per day/minute depending on provider
+  supportsEmbeddings?: boolean;
 }
 
 export interface LLMConfig {
@@ -27,14 +28,16 @@ export const LLM_PROVIDERS: Record<string, LLMProvider> = {
     models: ["llama-3.3-70b-versatile", "mixtral-8x7b-32768"],
     maxTokens: 8000,
     rateLimit: 14400, // per day
+    supportsEmbeddings: false,
   },
   google: {
     name: "Google AI Studio",
     baseUrl: null, // Uses google-generativeai library
-    apiKeyEnv: "GOOGLE_API_KEY",
+    apiKeyEnv: "GEMINI_API_KEY",
     models: ["gemini-2.5-flash", "gemini-1.5-pro"],
     maxTokens: 8192,
     rateLimit: 60000, // per minute
+    supportsEmbeddings: true,
   },
   euron: {
     name: "Euron.one",
@@ -43,6 +46,7 @@ export const LLM_PROVIDERS: Record<string, LLMProvider> = {
     models: ["gpt-4.1-nano", "gpt-4o-mini"],
     maxTokens: 4096,
     rateLimit: 10000,
+    supportsEmbeddings: true,
   },
   openrouter: {
     name: "OpenRouter",
@@ -54,6 +58,7 @@ export const LLM_PROVIDERS: Record<string, LLMProvider> = {
     ],
     maxTokens: 4096,
     rateLimit: 200,
+    supportsEmbeddings: true,
   },
   mistral: {
     name: "Mistral",
@@ -62,6 +67,7 @@ export const LLM_PROVIDERS: Record<string, LLMProvider> = {
     models: ["mistral-small-latest", "mistral-tiny"],
     maxTokens: 8000,
     rateLimit: 1000000000, // 1B tokens/month
+    supportsEmbeddings: false,
   },
   openai: {
     name: "OpenAI",
@@ -70,11 +76,15 @@ export const LLM_PROVIDERS: Record<string, LLMProvider> = {
     models: ["gpt-4o-mini", "gpt-4o"],
     maxTokens: 4096,
     rateLimit: 500, // varies by tier
+    supportsEmbeddings: false,
   },
 };
 
 // Priority order for fallback
 const PROVIDER_PRIORITY = ["groq", "google", "euron", "openrouter", "mistral", "openai"];
+
+export const EMBEDDING_PROVIDERS = ["google", "euron", "openrouter"] as const;
+export type EmbeddingCapableProvider = (typeof EMBEDDING_PROVIDERS)[number];
 
 // Get API key from environment or user's stored keys
 function getApiKey(provider: string, userApiKeys?: Record<string, string>): string | null {
@@ -175,13 +185,23 @@ export async function generateCompletion(
     userApiKeys?: Record<string, string>;
     preferredProvider?: string;
     preferredModel?: string;
+    strictProvider?: boolean;
   } = {}
 ): Promise<{ text: string; provider: string; model: string }> {
-  const { maxTokens = 4000, temperature = 0.7, userApiKeys, preferredProvider, preferredModel } = options;
+  const {
+    maxTokens = 4000,
+    temperature = 0.7,
+    userApiKeys,
+    preferredProvider,
+    preferredModel,
+    strictProvider = false,
+  } = options;
 
   // Reorder providers if there's a preferred one
   const providersToTry = preferredProvider
-    ? [preferredProvider, ...PROVIDER_PRIORITY.filter((p) => p !== preferredProvider)]
+    ? strictProvider
+      ? [preferredProvider]
+      : [preferredProvider, ...PROVIDER_PRIORITY.filter((p) => p !== preferredProvider)]
     : PROVIDER_PRIORITY;
 
   const errors: string[] = [];
@@ -245,9 +265,20 @@ export async function generateReadme(
     customPrompt?: string;
     includeMermaid?: boolean;
     includeArchitecture?: boolean;
+    preferredProvider?: string;
+    preferredModel?: string;
+    strictProvider?: boolean;
   } = {}
 ): Promise<{ text: string; provider: string; model: string }> {
-  const { userApiKeys, customPrompt, includeMermaid = false, includeArchitecture = true } = options;
+  const {
+    userApiKeys,
+    customPrompt,
+    includeMermaid = false,
+    includeArchitecture = true,
+    preferredProvider,
+    preferredModel,
+    strictProvider,
+  } = options;
 
   // Extract owner/repo from GitHub URL
   let githubInfo = "";
@@ -351,6 +382,9 @@ Generate a FULL, COMPLETE README now:`;
     maxTokens: 8000,
     temperature: 0.7,
     userApiKeys,
+    preferredProvider,
+    preferredModel,
+    strictProvider,
   });
 }
 
@@ -359,7 +393,12 @@ export async function generateMermaidDiagram(
   context: string,
   projectName: string,
   diagramType: "architecture" | "flow" | "sequence" | "class" = "architecture",
-  options: { userApiKeys?: Record<string, string> } = {}
+  options: {
+    userApiKeys?: Record<string, string>;
+    preferredProvider?: string;
+    preferredModel?: string;
+    strictProvider?: boolean;
+  } = {}
 ): Promise<{ text: string; provider: string; model: string }> {
   const diagramPrompts: Record<string, string> = {
     architecture: "system architecture showing components and their relationships",
@@ -386,5 +425,8 @@ Generate the Mermaid diagram now (wrap in \`\`\`mermaid code block):`;
     maxTokens: 2000,
     temperature: 0.5,
     userApiKeys: options.userApiKeys,
+    preferredProvider: options.preferredProvider,
+    preferredModel: options.preferredModel,
+    strictProvider: options.strictProvider,
   });
 }

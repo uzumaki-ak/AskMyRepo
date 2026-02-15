@@ -1,30 +1,71 @@
 'use server'
-import { generateText } from 'ai'
-import {createStreamableValue} from 'ai/rsc'
-import {createGoogleGenerativeAI} from '@ai-sdk/google'
-import { generateEmbedding } from '~/lib/gemini'
+import { createStreamableValue } from 'ai/rsc'
+import { auth } from '@clerk/nextjs/server'
+import {
+  generateEmbedding,
+  normalizeEmbeddingProvider,
+  type EmbeddingProvider,
+  type EmbeddingResult,
+} from '~/lib/gemini'
+import { generateCompletion } from '~/lib/llm-service'
 import { db } from '~/server/db'
-
-const google  = createGoogleGenerativeAI({
-  apiKey: process.env.GEMINI_API_KEY,
-})
 
 export async function askQuestion(question: string, projectID:string){
 const stream = createStreamableValue()
 
-const queryVector = await generateEmbedding(question)
+const { userId } = await auth()
+let preferredProvider: string | null = null
+const userApiKeys: Record<string, string> = {}
+if (userId) {
+  const [user, keys] = await Promise.all([
+    db.user.findUnique({
+      where: { id: userId },
+      select: { preferredProvider: true },
+    }),
+    db.userApiKey.findMany({
+      where: { userId, isActive: true },
+      select: { provider: true, apiKey: true },
+    }),
+  ])
+  preferredProvider = user?.preferredProvider ?? null
+  for (const key of keys) {
+    userApiKeys[key.provider] = key.apiKey
+  }
+}
+
+const rawProvider =
+  preferredProvider ?? process.env.EMBEDDING_PROVIDER ?? ""
+const embeddingProvider = normalizeEmbeddingProvider(rawProvider)
+const embeddingApiKey = embeddingProvider
+  ? userApiKeys[embeddingProvider]
+  : undefined
+const embeddingOptions =
+  embeddingProvider
+    ? { provider: embeddingProvider as EmbeddingProvider, apiKey: embeddingApiKey }
+    : {}
+const embeddingResult: EmbeddingResult | null = await generateEmbedding(
+  question,
+  embeddingOptions,
+)
 let result: {fileName: string, sourceCode: string, summary: string, similarity: number}[] = []
-if (queryVector?.length) {
-  const vectorQuery = `[${queryVector.join(',')}]`
-  result = await db.$queryRaw`
-  SELECT "fileName", "sourceCode", "summary", 
-  1 - ("summaryEmbedding" <=> ${vectorQuery}::vector) as similarity
-  FROM "SourceCodeEmbedding"
-  WHERE "summaryEmbedding" IS NOT NULL
-  AND "projectId" = ${projectID}
-  ORDER BY "summaryEmbedding" <=> ${vectorQuery}::vector
-  LIMIT 10
-  ` as {fileName: string, sourceCode: string, summary: string, similarity: number}[]
+if (embeddingResult?.embedding?.length) {
+  // Log the embedding details for debugging
+  console.log(`Query embedding: provider=${embeddingResult.provider}, model=${embeddingResult.model}, dimension=${embeddingResult.dimension}`)
+  const vectorQuery = `[${embeddingResult.embedding.join(',')}]`
+  try {
+    result = await db.$queryRaw`
+    SELECT "fileName", "sourceCode", "summary", 
+    1 - ("summaryEmbedding" <=> ${vectorQuery}::vector) as similarity
+    FROM "SourceCodeEmbedding"
+    WHERE "summaryEmbedding" IS NOT NULL
+    AND "projectId" = ${projectID}
+    AND vector_dims("summaryEmbedding") = ${embeddingResult.dimension}
+    ORDER BY "summaryEmbedding" <=> ${vectorQuery}::vector
+    LIMIT 10
+    ` as {fileName: string, sourceCode: string, summary: string, similarity: number}[]
+  } catch (error) {
+    console.error("Vector search failed, falling back to keyword search:", error)
+  }
 } else {
   console.warn("Embedding unavailable; falling back to keyword search.")
 }
@@ -149,33 +190,29 @@ for (const doc of result){
   }
 
   try {
-    const { text } = await generateText({
-      model: google(process.env.GEMINI_MODEL || "gemini-2.5-flash"),
-      prompt: `
-You are a ai code assistant who answers questions about the codebase. Your target audience is a technical intern who is new to the codebase. 
-AI assistant is a brand new, powerful, human-like artificial intelligence. 
-The traits of AI include expert knowledge, helpfulness, cleverness, and articulateness. 
-AI is a well-behaved and well-mannered individual. 
-AI is always friendly, kind, and inspiring, and he is eager to provide vivid and thoughtful responses to the user. 
-AI has the sum of all knowledge in their brain, and is able to accurately answer nearly any question about any topic in code. 
-If the question is asking about code or a specific file, AI will provide the detailed answer, giving step by step instructions.
+    const completion = await generateCompletion(
+      `
+You are a codebase assistant. Answer the question using only the context below.
+If the answer is not in the context, reply: "I don't know based on the indexed files."
+Be concise, technical, and direct. Cite file paths when relevant.
 
-START CONTEXT BLOCK  
-${context}  
-END OF CONTEXT BLOCK  
+CONTEXT:
+${context}
 
-START QUESTION  
-${question}  
-END OF QUESTION  
+QUESTION:
+${question}
 
-AI assistant will take into account any CONTEXT BLOCK that is provided in a conversation.  
-If the context does not provide the answer to question, the AI assistant will say, "I'm sorry, but I don't know the answer based on the provided context."  
-AI assistant will not apologize for previous responses, but instead will indicated new information was gained.  
-AI assistant will not invent anything that is not drawn directly from the context.  
-Answer in markdown syntax, with code snippets if needed. Be as detailed as possible when answering, make sure there is no ambiguity.
+Answer in markdown. Use short code snippets only when they clarify the answer.
     `,
-    })
-    stream.update(text || buildFallbackAnswer())
+      {
+        maxTokens: 1200,
+        temperature: 0.2,
+        userApiKeys,
+        preferredProvider: preferredProvider ?? undefined,
+        strictProvider: Boolean(preferredProvider),
+      },
+    )
+    stream.update(completion.text || buildFallbackAnswer())
   } catch (err) {
     console.error("AI answer failed", err)
     stream.update(buildFallbackAnswer())

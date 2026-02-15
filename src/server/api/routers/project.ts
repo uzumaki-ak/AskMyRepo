@@ -87,7 +87,22 @@ export const projectRouter = createTRPCRouter({
       }
     }
    })
-   await indexGithubRepo(project.id, input.githubUrl, input.githubToken)
+   const userKeys = await ctx.db.userApiKey.findMany({
+     where: { userId, isActive: true },
+     select: { provider: true, apiKey: true },
+   })
+   const apiKeyMap: Record<string, string> = {}
+   for (const key of userKeys) {
+     apiKeyMap[key.provider] = key.apiKey
+   }
+   const userPref = await ctx.db.user.findUnique({
+     where: { id: userId },
+     select: { preferredProvider: true },
+   })
+   await indexGithubRepo(project.id, input.githubUrl, input.githubToken, {
+     userApiKeys: apiKeyMap,
+     preferredProvider: userPref?.preferredProvider ?? undefined,
+   })
    await pollCommits(project.id, input.githubToken)
    return project
   }),
@@ -109,7 +124,99 @@ export const projectRouter = createTRPCRouter({
       const count = await ctx.db.sourceCodeEmbedding.count({
         where: { projectId: input.projectId },
       })
-      return { hasEmbeddings: count > 0, count }
+      const project = await ctx.db.project.findUnique({
+        where: { id: input.projectId },
+        select: {
+          githubUrl: true,
+          embeddingTotal: true,
+          embeddingIndexed: true,
+          embeddingStatus: true,
+          embeddingLastError: true,
+          embeddingLastAttemptAt: true,
+          embeddingRetryCount: true,
+        },
+      })
+      const total = project?.embeddingTotal ?? count
+      const indexed = project?.embeddingIndexed ?? count
+      let status =
+        project?.embeddingStatus ??
+        (indexed >= total && total > 0
+          ? "complete"
+          : indexed > 0
+            ? "partial"
+            : "idle")
+
+      // Auto-resume indexing in the background if it's incomplete.
+      if (
+        project &&
+        project.githubUrl &&
+        status !== "complete" &&
+        status !== "indexing"
+      ) {
+        const now = Date.now()
+        const lastAttempt = project.embeddingLastAttemptAt?.getTime() ?? 0
+        const minutesSince = (now - lastAttempt) / 60000
+        const shouldRetry = minutesSince >= 5
+        if (shouldRetry) {
+          const updated = await ctx.db.project.updateMany({
+            where: {
+              id: input.projectId,
+              embeddingStatus: { in: ["idle", "partial", "failed"] },
+            },
+            data: {
+              embeddingStatus: "indexing",
+              embeddingLastAttemptAt: new Date(),
+              embeddingLastError: null,
+              embeddingRetryCount: { increment: 1 },
+            },
+          })
+          if (updated.count === 1) {
+            status = "indexing"
+            const userKeys = await ctx.db.userApiKey.findMany({
+              where: { userId: ctx.user.userId, isActive: true },
+              select: { provider: true, apiKey: true },
+            })
+            const apiKeyMap: Record<string, string> = {}
+            for (const key of userKeys) {
+              apiKeyMap[key.provider] = key.apiKey
+            }
+            const userPref = await ctx.db.user.findUnique({
+              where: { id: ctx.user.userId },
+              select: { preferredProvider: true },
+            })
+            void indexGithubRepo(
+              input.projectId,
+              project.githubUrl,
+              undefined,
+              {
+                resume: true,
+                userApiKeys: apiKeyMap,
+                preferredProvider: userPref?.preferredProvider ?? undefined,
+              },
+            ).catch(async (error) => {
+              await ctx.db.project.update({
+                where: { id: input.projectId },
+                data: {
+                  embeddingStatus: "failed",
+                  embeddingLastError:
+                    error instanceof Error ? error.message : String(error),
+                },
+              })
+            })
+          }
+        }
+      }
+
+      return {
+        hasEmbeddings: count > 0,
+        count,
+        total,
+        indexed,
+        status,
+        lastError: project?.embeddingLastError ?? null,
+        lastAttemptAt: project?.embeddingLastAttemptAt ?? null,
+        retryCount: project?.embeddingRetryCount ?? 0,
+      }
     }),
   getCommits: privateProcedure.input(z.object ({
     projectId : z.string()
@@ -176,6 +283,55 @@ export const projectRouter = createTRPCRouter({
       stoppedForQuota,
     }
   }),
+  reindexEmbeddings: privateProcedure
+    .input(
+      z.object({
+        projectId: z.string(),
+        githubToken: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const project = await ctx.db.project.findFirst({
+        where: {
+          id: input.projectId,
+          userToProjects: {
+            some: {
+              userId: ctx.user.userId,
+            },
+          },
+          deletedAt: null,
+        },
+        select: { id: true, githubUrl: true },
+      })
+
+      if (!project) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Project not found",
+        })
+      }
+
+      const userKeys = await ctx.db.userApiKey.findMany({
+        where: { userId: ctx.user.userId, isActive: true },
+        select: { provider: true, apiKey: true },
+      })
+      const apiKeyMap: Record<string, string> = {}
+      for (const key of userKeys) {
+        apiKeyMap[key.provider] = key.apiKey
+      }
+      const userPref = await ctx.db.user.findUnique({
+        where: { id: ctx.user.userId },
+        select: { preferredProvider: true },
+      })
+
+      await indexGithubRepo(project.id, project.githubUrl, input.githubToken, {
+        resume: true,
+        userApiKeys: apiKeyMap,
+        preferredProvider: userPref?.preferredProvider ?? undefined,
+      })
+
+      return { success: true }
+    }),
   deleteProject: privateProcedure
     .input(z.object({ projectId: z.string() }))
     .mutation(async ({ ctx, input }) => {

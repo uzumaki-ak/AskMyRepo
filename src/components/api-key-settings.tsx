@@ -22,6 +22,13 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -52,6 +59,7 @@ interface ProviderInfo {
   maxTokens: number;
   rateLimit: number;
   apiKeyEnv: string;
+  supportsEmbeddings: boolean;
 }
 
 const PROVIDER_LINKS: Record<string, string> = {
@@ -72,6 +80,8 @@ export function ApiKeySettings() {
   const { data: providers } = api.apiKeys.getProviders.useQuery();
   const { data: userKeys, refetch: refetchKeys } = api.apiKeys.list.useQuery();
   const { data: configured } = api.apiKeys.checkConfigured.useQuery();
+  const { data: preference, refetch: refetchPreference } =
+    api.apiKeys.getPreference.useQuery();
 
   const setApiKey = api.apiKeys.set.useMutation({
     onSuccess: () => {
@@ -106,6 +116,16 @@ export function ApiKeySettings() {
     },
   });
 
+  const setPreference = api.apiKeys.setPreference.useMutation({
+    onSuccess: () => {
+      toast.success("Preferred provider updated");
+      refetchPreference();
+    },
+    onError: (error) => {
+      toast.error(`Failed to update preference: ${error.message}`);
+    },
+  });
+
   const handleSaveKey = () => {
     if (!selectedProvider || !newApiKey.trim()) {
       toast.error("Please enter an API key");
@@ -116,6 +136,17 @@ export function ApiKeySettings() {
 
   const userKeyMap = new Map(userKeys?.map((k) => [k.provider, k]));
   const configuredMap = new Map(configured?.map((c) => [c.provider, c]));
+  const embeddingProviders =
+    providers?.filter((provider) => provider.supportsEmbeddings) ?? [];
+  const configuredEmbeddingProviders = new Set(
+    embeddingProviders
+      .filter((provider) => {
+        const userKey = userKeyMap.get(provider.id);
+        const config = configuredMap.get(provider.id);
+        return Boolean(userKey?.isActive || config?.hasEnvKey);
+      })
+      .map((provider) => provider.id),
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -141,8 +172,75 @@ export function ApiKeySettings() {
           <Card className="border-blue-500/20 bg-blue-500/5">
             <CardContent className="p-4">
               <p className="text-sm text-muted-foreground">
-                <strong>How it works:</strong> The system will first use your saved API keys, then fall back to system keys. If one provider fails or hits rate limits, it automatically tries the next available provider.
+                <strong>How it works:</strong> Choose a preferred provider to use for both chat
+                responses and embeddings. If no preference is set, the system will fall back to
+                other available providers for text tasks.
               </p>
+            </CardContent>
+          </Card>
+          <Card className="border-emerald-500/20 bg-emerald-500/5">
+            <CardContent className="space-y-2 p-4">
+              <p className="text-sm text-muted-foreground">
+                <strong>Free-tier embeddings:</strong> Gemini uses{" "}
+                <code>gemini-embedding-001</code> (free tier, default 3072 dims; recommended 768,
+                1536, or 3072).
+              </p>
+              <p className="text-sm text-muted-foreground">
+                <strong>Euron:</strong> public docs for free-tier embedding models were not
+                accessible; this app will use your <code>EURON_EMBEDDING_MODEL</code> setting.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                <strong>OpenRouter:</strong> embeddings are supported via the OpenRouter embeddings
+                API. Set <code>OPENROUTER_EMBEDDING_MODEL</code> to the model you want (free models
+                vary by provider).
+              </p>
+              <p className="text-sm text-muted-foreground">
+                <strong>Groq:</strong> embeddings are not supported, so Groq can’t be used for
+                embeddings in this app.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                If you want me to add Mistral embeddings next, tell me which embedding model(s) you
+                want to use (and preferred output dimensions).
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Preferred provider */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Default Provider (Chat + Embeddings)</CardTitle>
+              <CardDescription className="text-xs">
+                Select a provider to use for both Q&A answers and embeddings. Only providers with
+                embedding support are selectable.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pb-4">
+              <Select
+                value={preference?.preferredProvider ?? "__auto__"}
+                onValueChange={(value) => {
+                  const provider = value === "__auto__" ? null : value;
+                  setPreference.mutate({ provider });
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Auto (fallback)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__auto__">Auto (fallback)</SelectItem>
+                  {embeddingProviders.map((provider) => (
+                    <SelectItem
+                      key={provider.id}
+                      value={provider.id}
+                      disabled={!configuredEmbeddingProviders.has(provider.id)}
+                    >
+                      {provider.name}
+                      {!configuredEmbeddingProviders.has(provider.id)
+                        ? " (no key)"
+                        : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </CardContent>
           </Card>
 
