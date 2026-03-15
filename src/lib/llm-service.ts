@@ -280,14 +280,22 @@ export async function generateReadme(
     strictProvider,
   } = options;
 
+  // Prevent hallucination if no context is provided
+  if (!context || context.trim() === "" || context.length < 50) {
+    throw new Error(
+      "Insufficient code context found for this project! Please wait for indexing to complete or ensure your repository is not empty before generating a README."
+    );
+  }
+
   // Extract owner/repo from GitHub URL
   let githubInfo = "";
-  let owner = "";
-  let repo = "";
+  let owner = "owner";
+  let repo = "repo";
   try {
     const url = new URL(githubUrl);
     const pathParts = url.pathname.split("/").filter(Boolean);
-    const [ownerPart, repoPart] = pathParts;
+    const ownerPart = pathParts[0];
+    const repoPart = pathParts[1];
     if (ownerPart && repoPart) {
       owner = ownerPart;
       repo = repoPart;
@@ -298,7 +306,7 @@ GitHub Discussions: https://github.com/${owner}/${repo}/discussions
 Contribute: https://github.com/${owner}/${repo}/contribute`;
     }
   } catch {
-    // Invalid URL, continue without GitHub info
+    // Invalid URL, continue with default owner/repo placeholders
   }
 
   const mermaidPrompt = includeMermaid
@@ -351,7 +359,7 @@ ${customPromptSection}
    - Version (if found)
 
 5. **Quick Start / Installation:** 
-   - Clone command: \`git clone https://github.com/${owner}/${repo}.git\` (or placeholder if no GitHub)
+   - Clone command: \`git clone https://github.com/${owner}/${repo}.git\`
    - Prerequisites
    - Step-by-step installation
 

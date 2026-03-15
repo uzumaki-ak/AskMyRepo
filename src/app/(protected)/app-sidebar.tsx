@@ -45,10 +45,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
+import { ModeToggle } from "~/components/mode-toggle";
 
 const sideBarItems = [
   {
-    title: "Dahsboard",
+    title: "Dashboard",
     url: "/dashboard",
     icon: LayoutDashboardIcon,
   },
@@ -57,16 +58,16 @@ const sideBarItems = [
     url: "/qa",
     icon: BotIcon,
   },
-  {
-    title: "Mating",
-    url: "/meetings",
-    icon: PresentationIcon,
-  },
-  {
-    title: "Billing",
-    url: "/billing",
-    icon: CreditCardIcon,
-  },
+  // {
+  //   title: "Meetings",
+  //   url: "/meetings",
+  //   icon: PresentationIcon,
+  // },
+  // {
+  //   title: "Billing",
+  //   url: "/billing",
+  //   icon: CreditCardIcon,
+  // },
 ];
 
 const AppSidebar = () => {
@@ -94,11 +95,14 @@ const AppSidebar = () => {
   return (
     <Sidebar collapsible="icon" variant="floating">
       <SidebarHeader>
-        <div className="flex items-center gap-2">
-          <Image src="/favicon.ico" alt="logo" width={40} height={40} />
-          {open && (
-            <h2 className="text-primary/80 text-xl font-bold">AskRepo</h2>
-          )}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Image src="/favicon.ico" alt="logo" width={40} height={40} />
+            {open && (
+              <h2 className="text-primary/80 text-xl font-bold">AskRepo</h2>
+            )}
+          </div>
+          {open && <ModeToggle />}
         </div>
       </SidebarHeader>
       <SidebarContent>
