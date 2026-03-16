@@ -178,10 +178,10 @@ export default function ReadmeGeneratorCard({
                 size="sm"
                 variant="secondary"
                 onClick={() => router.push("/readme")}
-                className="flex-1 sm:flex-none"
+                className="h-8 px-2 text-xs"
               >
-                <FileText className="h-4 w-4" />
-                <span className="ml-1 hidden sm:inline">Open README</span>
+                <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                Open
               </Button>
             )}
           </div>
