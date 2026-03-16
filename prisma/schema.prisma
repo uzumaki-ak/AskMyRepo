@@ -25,6 +25,12 @@ model User {
     savedQuestions   SavedQuestion[]
     apiKeys          UserApiKey[]
     generatedReadmes GeneratedReadme[]
+    mermaidDiagrams  MermaidDiagram[]
+    interviewSets    InterviewQuestionSet[]
+    audits           ProjectAudit[]
+    dailyBriefs      DailyBrief[]
+    aiChanges        AiChange[]
+    interviewChats   InterviewChat[]
 }
 
 model Project {
@@ -45,6 +51,30 @@ model Project {
     sourceCodeEmbeddings SourceCodeEmbedding[]
     savedQuestions       SavedQuestion[]
     generatedReadmes     GeneratedReadme[]
+    mermaidDiagrams      MermaidDiagram[]
+    interviewSets        InterviewQuestionSet[]
+    audits               ProjectAudit[]
+    dailyBriefs          DailyBrief[]
+    aiChanges            AiChange[]
+    interviewChats       InterviewChat[]
+}
+
+model AiChange {
+    id            String   @id @default(cuid())
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+    projectId     String
+    userId        String
+    fileName      String
+    oldCode       String
+    newCode       String
+    prompt        String
+    commitMessage String
+    commitUrl     String?
+    project       Project  @relation(fields: [projectId], references: [id])
+    user          User     @relation(fields: [userId], references: [id])
+
+    @@index([projectId])
 }
 
 model UserToProject {
@@ -110,6 +140,21 @@ model UserApiKey {
     @@unique([userId, provider])
 }
 
+model InterviewChat {
+    id         String   @id @default(cuid())
+    createdAt  DateTime @default(now())
+    updatedAt  DateTime @updatedAt
+    userId     String
+    projectId  String
+    question   String
+    answer     String
+    messages   Json     // [{ role: 'user' | 'assistant', content: string }]
+    user       User     @relation(fields: [userId], references: [id])
+    project    Project  @relation(fields: [projectId], references: [id])
+
+    @@index([projectId])
+}
+
 // Generated READMEs for projects
 model GeneratedReadme {
     id             String   @id @default(cuid())
@@ -125,4 +170,63 @@ model GeneratedReadme {
     project        Project  @relation(fields: [projectId], references: [id])
 
     @@unique([userId, projectId])
+}
+
+model MermaidDiagram {
+    id        String   @id @default(cuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    userId    String
+    projectId String
+    chart     String   // The Mermaid diagram code
+    prompt    String?  // Custom prompt used
+    diagramType String // architecture, flow, etc.
+    user      User     @relation(fields: [userId], references: [id])
+    project   Project  @relation(fields: [projectId], references: [id])
+
+    @@index([projectId])
+}
+
+model InterviewQuestionSet {
+    id        String   @id @default(cuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    userId    String
+    projectId String
+    questions Json     // Array of strings
+    user      User     @relation(fields: [userId], references: [id])
+    project   Project  @relation(fields: [projectId], references: [id])
+
+    @@index([projectId])
+}
+
+model ProjectAudit {
+    id              String   @id @default(cuid())
+    createdAt       DateTime @default(now())
+    updatedAt       DateTime @updatedAt
+    userId          String
+    projectId       String
+    complexity      Int
+    documentation   Int
+    modernity       Int
+    maintainability Int
+    summary         String
+    user            User     @relation(fields: [userId], references: [id])
+    project         Project  @relation(fields: [projectId], references: [id])
+
+    @@index([projectId])
+}
+
+model DailyBrief {
+    id        String   @id @default(cuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    userId    String
+    projectId String
+    script    String   // The podcast script
+    date      String   // Display date
+    user      User     @relation(fields: [userId], references: [id])
+    project   Project  @relation(fields: [projectId], references: [id])
+
+    @@index([projectId])
 }
