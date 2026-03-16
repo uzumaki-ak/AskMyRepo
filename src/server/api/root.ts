@@ -12,6 +12,9 @@ import { visualizerRouter } from "./routers/visualizer";
 import { historyRouter } from "./routers/history";
 import { briefingRouter } from "./routers/briefing";
 import { auditRouter } from "./routers/audit";
+import { collaborationRouter } from "./routers/collaboration";
+import { notesRouter } from "./routers/notes";
+import { reviewRouter } from "./routers/review";
 
 /**
  * This is the primary router for your server.
@@ -30,6 +33,9 @@ export const appRouter = createTRPCRouter({
   briefing: briefingRouter,
   audit: auditRouter,
   agent: agentRouter,
+  collaboration: collaborationRouter,
+  notes: notesRouter,
+  review: reviewRouter,
 });
 
 // export type definition of API

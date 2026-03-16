@@ -31,6 +31,7 @@ model User {
     dailyBriefs      DailyBrief[]
     aiChanges        AiChange[]
     interviewChats   InterviewChat[]
+    knowledgeNotes   KnowledgeNote[]
 }
 
 model Project {
@@ -57,6 +58,8 @@ model Project {
     dailyBriefs          DailyBrief[]
     aiChanges            AiChange[]
     interviewChats       InterviewChat[]
+    knowledgeNotes       KnowledgeNote[]
+    invitations          Invitation[]
 }
 
 model AiChange {
@@ -77,16 +80,47 @@ model AiChange {
     @@index([projectId])
 }
 
+enum Role {
+    ADMIN
+    MEMBER
+}
+
 model UserToProject {
     id        String   @id @default(cuid())
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
     userId    String
     projectId String
+    role      Role     @default(MEMBER)
     user      User     @relation(fields: [userId], references: [id])
     project   Project  @relation(fields: [projectId], references: [id])
 
     @@unique([userId, projectId])
+}
+
+model Invitation {
+    id        String   @id @default(cuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    email     String
+    projectId String
+    role      Role     @default(MEMBER)
+    token     String   @unique
+    expiresAt DateTime
+    project   Project  @relation(fields: [projectId], references: [id])
+
+    @@unique([email, projectId])
+}
+
+model KnowledgeNote {
+    id        String   @id @default(cuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    content   String
+    userId    String
+    projectId String
+    user      User     @relation(fields: [userId], references: [id])
+    project   Project  @relation(fields: [projectId], references: [id])
 }
 
 model SourceCodeEmbedding {
