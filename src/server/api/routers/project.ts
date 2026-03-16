@@ -221,8 +221,14 @@ export const projectRouter = createTRPCRouter({
   getCommits: privateProcedure.input(z.object ({
     projectId : z.string()
   })).query(async ({ctx, input}) => {
-    pollCommits(input.projectId).then().catch(console.error)
     return await ctx.db.commit.findMany({where:  {projectId: input.projectId}})
+  }),
+  syncCommits: privateProcedure.input(z.object({
+    projectId: z.string(),
+    githubToken: z.string().optional(),
+    force: z.boolean().default(false)
+  })).mutation(async ({ ctx, input }) => {
+    return await pollCommits(input.projectId, input.githubToken, input.force)
   }),
   resummarizeCommits: privateProcedure.input(
     z.object({
@@ -361,5 +367,36 @@ export const projectRouter = createTRPCRouter({
       });
 
       return { success: true };
+    }),
+  summarizeSingleCommit: privateProcedure
+    .input(z.object({ 
+      projectId: z.string(), 
+      commitHash: z.string(),
+      githubToken: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const project = await ctx.db.project.findUnique({
+        where: { id: input.projectId },
+        select: { githubUrl: true },
+      })
+      if (!project?.githubUrl) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Project or GitHub URL not found",
+        })
+      }
+      const summary = await summariseCommit(
+        project.githubUrl,
+        input.commitHash,
+        input.githubToken
+      )
+      await ctx.db.commit.updateMany({
+        where: { 
+          projectId: input.projectId,
+          commitHash: input.commitHash 
+        },
+        data: { summary },
+      })
+      return { summary }
     }),
 })

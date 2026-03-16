@@ -95,7 +95,7 @@ export const readmeRouter = createTRPCRouter({
         includeMermaid: input.includeMermaid,
         includeArchitecture: input.includeArchitecture,
         preferredProvider,
-        strictProvider: Boolean(preferredProvider),
+        strictProvider: false,
       });
 
       // Save to database
@@ -209,7 +209,7 @@ export const readmeRouter = createTRPCRouter({
           includeMermaid: input.includeMermaid,
           includeArchitecture: input.includeArchitecture,
           preferredProvider,
-          strictProvider: Boolean(preferredProvider),
+          strictProvider: false,
         });
 
         // Update existing record
@@ -311,7 +311,7 @@ export const readmeRouter = createTRPCRouter({
         {
           userApiKeys: apiKeyMap,
           preferredProvider,
-          strictProvider: Boolean(preferredProvider),
+          strictProvider: false,
         }
       );
 

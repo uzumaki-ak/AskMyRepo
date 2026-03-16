@@ -209,7 +209,7 @@ Answer in markdown. Use short code snippets only when they clarify the answer.
         temperature: 0.2,
         userApiKeys,
         preferredProvider: preferredProvider ?? undefined,
-        strictProvider: Boolean(preferredProvider),
+        strictProvider: false,
       },
     )
     stream.update(completion.text || buildFallbackAnswer())

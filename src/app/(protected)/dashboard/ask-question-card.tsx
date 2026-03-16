@@ -136,7 +136,7 @@ const AskQuesCard = () => {
           <div className="flex items-center justify-between gap-3 border-b px-6 py-4">
             <DialogHeader>
               <DialogTitle>
-                <Image src="/favicon.ico" alt="logo" width={40} height={40} />
+                <Image src="/gitgodlogo.jpg" alt="logo" width={40} height={40} className="rounded-md" />
               </DialogTitle>
             </DialogHeader>
             <Button
@@ -150,19 +150,19 @@ const AskQuesCard = () => {
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
             <div className="min-w-0">
-              <h2 className="text-sm font-semibold text-zinc-700">
+              <h2 className="text-sm font-semibold text-muted-foreground">
                 Answer
               </h2>
-              <div className="mt-2 max-h-40 overflow-auto text-sm leading-6 whitespace-pre-wrap text-zinc-800">
+              <div className="mt-2 max-h-40 overflow-auto text-sm leading-6 whitespace-pre-wrap text-foreground italic">
                 {loading && !answer ? "Thinking..." : answer || "No answer yet."}
               </div>
             </div>
             <div className="mt-4 min-h-0 min-w-0">
-              <h3 className="text-sm font-semibold text-zinc-700">
+              <h3 className="text-sm font-semibold text-muted-foreground">
                 File References
               </h3>
               {filesRefrences.length === 0 ? (
-                <p className="text-sm text-zinc-500">No matching files found.</p>
+                <p className="text-sm text-muted-foreground/60">No matching files found.</p>
               ) : (
                 <Tabs defaultValue={tabsValue} className="min-w-0">
                   <TabsList className="flex max-w-full flex-nowrap overflow-x-auto">

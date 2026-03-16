@@ -4,7 +4,15 @@ import { projectRouter } from "./routers/project";
 import { questionRouter } from "./routers/question";
 import { readmeRouter } from "./routers/readme";
 import { apiKeysRouter } from "./routers/apiKeys";
+import { agentRouter } from "./routers/agent";
 import 'dotenv/config'
+import { interviewRouter } from "./routers/interview";
+
+import { visualizerRouter } from "./routers/visualizer";
+import { historyRouter } from "./routers/history";
+import { briefingRouter } from "./routers/briefing";
+import { auditRouter } from "./routers/audit";
+
 /**
  * This is the primary router for your server.
  *
@@ -16,6 +24,12 @@ export const appRouter = createTRPCRouter({
   question: questionRouter,
   readme: readmeRouter,
   apiKeys: apiKeysRouter,
+  interview: interviewRouter,
+  visualizer: visualizerRouter,
+  history: historyRouter,
+  briefing: briefingRouter,
+  audit: auditRouter,
+  agent: agentRouter,
 });
 
 // export type definition of API

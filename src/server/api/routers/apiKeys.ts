@@ -1,8 +1,9 @@
+import { encrypt } from "~/lib/encryption";
 import { z } from "zod";
 import { createTRPCRouter, privateProcedure } from "../trpc";
 import { LLM_PROVIDERS } from "~/lib/llm-service";
 
-const validProviders = Object.keys(LLM_PROVIDERS);
+const validProviders = [...Object.keys(LLM_PROVIDERS), "github"];
 
 export const apiKeysRouter = createTRPCRouter({
   // Get all user's API keys (masked)
@@ -23,7 +24,7 @@ export const apiKeysRouter = createTRPCRouter({
 
   // Get available providers with their info
   getProviders: privateProcedure.query(() => {
-    return Object.entries(LLM_PROVIDERS).map(([key, config]) => ({
+    const providers = Object.entries(LLM_PROVIDERS).map(([key, config]) => ({
       id: key,
       name: config.name,
       models: config.models,
@@ -32,6 +33,19 @@ export const apiKeysRouter = createTRPCRouter({
       apiKeyEnv: config.apiKeyEnv,
       supportsEmbeddings: !!config.supportsEmbeddings,
     }));
+    
+    // Add GitHub manually since it's not in LLM_PROVIDERS
+    providers.push({
+      id: "github",
+      name: "GitHub",
+      models: ["Git Push / Commit"],
+      maxTokens: 0,
+      rateLimit: 5000,
+      apiKeyEnv: "GITHUB_TOKEN",
+      supportsEmbeddings: false,
+    });
+    
+    return providers;
   }),
 
   // Add or update an API key
@@ -45,6 +59,8 @@ export const apiKeysRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const encryptedKey = encrypt(input.apiKey);
+      
       // Upsert the API key
       const existingKey = await ctx.db.userApiKey.findUnique({
         where: {
@@ -59,7 +75,7 @@ export const apiKeysRouter = createTRPCRouter({
         // Update existing key
         return ctx.db.userApiKey.update({
           where: { id: existingKey.id },
-          data: { apiKey: input.apiKey, isActive: true },
+          data: { apiKey: encryptedKey, isActive: true },
         });
       }
 
@@ -68,7 +84,7 @@ export const apiKeysRouter = createTRPCRouter({
         data: {
           userId: ctx.user.userId,
           provider: input.provider,
-          apiKey: input.apiKey,
+          apiKey: encryptedKey,
           isActive: true,
         },
       });
@@ -151,6 +167,7 @@ export const apiKeysRouter = createTRPCRouter({
       }
       if (
         input.provider &&
+        input.provider !== "github" &&
         !LLM_PROVIDERS[input.provider]?.supportsEmbeddings
       ) {
         throw new Error("Provider does not support embeddings in this app");

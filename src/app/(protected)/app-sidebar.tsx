@@ -54,20 +54,46 @@ const sideBarItems = [
     icon: LayoutDashboardIcon,
   },
   {
-    title: "Q&A",
+    title: "Q&A Chat",
     url: "/qa",
     icon: BotIcon,
   },
-  // {
-  //   title: "Meetings",
-  //   url: "/meetings",
-  //   icon: PresentationIcon,
-  // },
-  // {
-  //   title: "Billing",
-  //   url: "/billing",
-  //   icon: CreditCardIcon,
-  // },
+  {
+    title: "Code Archaeology",
+    url: "/history",
+    icon: FileTextIcon,
+  },
+];
+
+const analysisItems = [
+  {
+    title: "Repo DNA",
+    url: "/visualizer",
+    icon: PresentationIcon,
+  },
+  {
+    title: "Health Audit",
+    url: "/audit",
+    icon: LayoutDashboardIcon, // Using dashboard icon for audit radar
+  },
+  {
+    title: "Daily Brief",
+    url: "/daily-brief",
+    icon: BotIcon,
+  },
+];
+
+const growthItems = [
+  {
+    title: "Interview Prep",
+    url: "/interview",
+    icon: KeyIcon,
+  },
+  {
+    title: "AI Editor",
+    url: "/agent",
+    icon: BotIcon,
+  },
 ];
 
 const AppSidebar = () => {
@@ -97,7 +123,7 @@ const AppSidebar = () => {
       <SidebarHeader>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Image src="/favicon.ico" alt="logo" width={40} height={40} />
+            <Image src="/gitgodlogo.jpg" alt="logo" width={40} height={40} className="rounded-md" />
             {open && (
               <h2 className="text-primary/80 text-xl font-bold">AskRepo</h2>
             )}
@@ -117,7 +143,59 @@ const AppSidebar = () => {
                       <Link
                         href={sidebaritem.url}
                         className={cn({
-                          "!bg-primary !text-white":
+                          "!bg-primary !text-primary-foreground":
+                            pathname === sidebaritem.url,
+                        })}
+                      >
+                        <sidebaritem.icon />
+                        <span>{sidebaritem.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Analysis</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {analysisItems.map((sidebaritem) => {
+                return (
+                  <SidebarMenuItem key={sidebaritem.title}>
+                    <SidebarMenuButton asChild>
+                      <Link
+                        href={sidebaritem.url}
+                        className={cn({
+                          "!bg-primary !text-primary-foreground":
+                            pathname === sidebaritem.url,
+                        })}
+                      >
+                        <sidebaritem.icon />
+                        <span>{sidebaritem.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Growth</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {growthItems.map((sidebaritem) => {
+                return (
+                  <SidebarMenuItem key={sidebaritem.title}>
+                    <SidebarMenuButton asChild>
+                      <Link
+                        href={sidebaritem.url}
+                        className={cn({
+                          "!bg-primary !text-primary-foreground":
                             pathname === sidebaritem.url,
                         })}
                       >
@@ -146,9 +224,9 @@ const AppSidebar = () => {
                       >
                         <div
                           className={cn(
-                            "text-primary flex size-6 items-center justify-center rounded-sm border bg-white text-sm",
+                            "text-primary flex size-6 items-center justify-center rounded-sm border bg-sidebar-accent/50 border-sidebar-border text-sm backdrop-blur-sm",
                             {
-                              "bg-primary text-white": project.id === projectId,
+                              "bg-primary text-primary-foreground border-primary": project.id === projectId,
                             },
                           )}
                         >
