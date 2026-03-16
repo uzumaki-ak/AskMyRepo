@@ -82,7 +82,8 @@ export const projectRouter = createTRPCRouter({
 
       userToProjects: {
         create: {
-          userId
+          userId,
+          role: 'ADMIN'
         }
       }
     }
@@ -107,7 +108,7 @@ export const projectRouter = createTRPCRouter({
    return project
   }),
   getProjects: privateProcedure.query(async({ctx})=> {
-    return await ctx.db.project.findMany({
+    const projects = await ctx.db.project.findMany({
       where: {
         userToProjects: {
           some: {
@@ -115,8 +116,19 @@ export const projectRouter = createTRPCRouter({
           }
         },
         deletedAt: null
-      }
+      },
+      include: {
+        userToProjects: {
+          where: { userId: ctx.user.userId! },
+          select: { role: true },
+        },
+      },
     })
+    return projects.map(p => ({
+      ...p,
+      userRole: p.userToProjects[0]?.role ?? 'MEMBER',
+      userToProjects: undefined,
+    }))
   }),
   getEmbeddingStatus: privateProcedure
     .input(z.object({ projectId: z.string() }))
@@ -341,23 +353,19 @@ export const projectRouter = createTRPCRouter({
   deleteProject: privateProcedure
     .input(z.object({ projectId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const project = await ctx.db.project.findFirst({
+      // Only ADMIN can delete a project
+      const adminEntry = await ctx.db.userToProject.findFirst({
         where: {
-          id: input.projectId,
-          userToProjects: {
-            some: {
-              userId: ctx.user.userId,
-            },
-          },
-          deletedAt: null,
+          projectId: input.projectId,
+          userId: ctx.user.userId,
+          role: "ADMIN",
         },
-        select: { id: true },
       });
 
-      if (!project) {
+      if (!adminEntry) {
         throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Project not found",
+          code: "FORBIDDEN",
+          message: "Only project admins can delete projects.",
         });
       }
 

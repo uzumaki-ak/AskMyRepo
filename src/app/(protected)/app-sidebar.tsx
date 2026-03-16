@@ -7,6 +7,7 @@ import {
   PlusCircleIcon,
   PresentationIcon,
   Trash2,
+  PencilRuler,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -235,7 +236,7 @@ const AppSidebar = () => {
                         <span>{project.name}</span>
                       </div>
                     </SidebarMenuButton>
-                    {open && (
+                    {open && (project as any).userRole === 'ADMIN' && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <SidebarMenuAction
@@ -285,8 +286,19 @@ const AppSidebar = () => {
                             isActive={pathname === "/readme"}
                           >
                             <Link href="/readme">
-                              <FileTextIcon />
+                              <FileTextIcon className="size-4" />
                               <span>README</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={pathname === "/notes"}
+                          >
+                            <Link href="/notes">
+                              <PencilRuler className="size-4" />
+                              <span>Sketchboard</span>
                             </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>

@@ -10,6 +10,21 @@ export const interviewRouter = createTRPCRouter({
       customPrompt: z.string().optional()
     }))
     .mutation(async ({ ctx, input }) => {
+      const isAdmin = await ctx.db.userToProject.findFirst({
+        where: {
+          projectId: input.projectId,
+          userId: ctx.user.userId,
+          role: "ADMIN",
+        }
+      });
+
+      if (!isAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only project admins can access the technical interview suite.",
+        });
+      }
+
       const project = await ctx.db.project.findUnique({
         where: { id: input.projectId },
         include: {
@@ -101,6 +116,21 @@ export const interviewRouter = createTRPCRouter({
       userDoubt: z.string(),
     }))
     .mutation(async ({ ctx, input }) => {
+      const isAdmin = await ctx.db.userToProject.findFirst({
+        where: {
+          projectId: input.projectId,
+          userId: ctx.user.userId,
+          role: "ADMIN",
+        }
+      });
+
+      if (!isAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Access restricted to project admins.",
+        });
+      }
+
       const project = await ctx.db.project.findUnique({
         where: { id: input.projectId },
         include: {
@@ -170,6 +200,18 @@ export const interviewRouter = createTRPCRouter({
   getHistory: privateProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
+      const isAdmin = await ctx.db.userToProject.findFirst({
+        where: {
+          projectId: input.projectId,
+          userId: ctx.user.userId,
+          role: "ADMIN",
+        }
+      });
+
+      if (!isAdmin) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "History restricted to admins." });
+      }
+
       return await ctx.db.interviewQuestionSet.findMany({
         where: { projectId: input.projectId },
         orderBy: { createdAt: "desc" },
