@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
 import {
   Dialog,
   DialogContent,
@@ -76,6 +77,11 @@ export function ApiKeySettings() {
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [newApiKey, setNewApiKey] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const { data: providers } = api.apiKeys.getProviders.useQuery();
   const { data: userKeys, refetch: refetchKeys } = api.apiKeys.list.useQuery();
@@ -147,6 +153,15 @@ export function ApiKeySettings() {
       })
       .map((provider) => provider.id),
   );
+
+  if (!mounted) {
+    return (
+      <Button variant="ghost" size="sm" className="w-full justify-start gap-2" disabled>
+        <Key className="h-4 w-4" />
+        <span>API Keys</span>
+      </Button>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
