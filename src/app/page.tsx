@@ -1,16 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { 
   Bot, 
   Code2, 
   Cpu, 
-  Github, 
   Info, 
   Lock, 
   Zap, 
-  CheckCircle2, 
   MessageSquare, 
   ChevronRight,
   Menu,
@@ -28,10 +27,18 @@ import {
 } from "~/components/ui/accordion";
 
 export default function Home() {
+  const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  const goToDashboard = () => {
+    setIsMenuOpen(false);
+    router.push("/dashboard");
+  };
 
   useEffect(() => {
+    setHasMounted(true);
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
@@ -120,22 +127,26 @@ export default function Home() {
             <Link href="#faq" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">FAQ</Link>
             <div className="h-4 w-px bg-border mx-2"></div>
             <ModeToggle />
-            <SignedOut>
-              <SignInButton mode="modal">
-                <Button variant="ghost" size="sm" className="font-semibold">Sign In</Button>
-              </SignInButton>
-              <SignInButton mode="modal">
-                <Button size="sm" className="font-semibold px-6 shadow-lg shadow-primary/20">Get Started</Button>
-              </SignInButton>
-            </SignedOut>
-            <SignedIn>
-              <Button asChild size="sm" className="font-semibold px-6">
-                <Link href="/dashboard">Dashboard</Link>
-              </Button>
-              <SignOutButton>
-                <Button variant="ghost" size="sm">Sign Out</Button>
-              </SignOutButton>
-            </SignedIn>
+            {hasMounted ? (
+              <>
+                <SignedOut>
+                  <SignInButton mode="modal">
+                    <Button variant="ghost" size="sm" className="font-semibold">Sign In</Button>
+                  </SignInButton>
+                  <SignInButton mode="modal">
+                    <Button size="sm" className="font-semibold px-6 shadow-lg shadow-primary/20">Get Started</Button>
+                  </SignInButton>
+                </SignedOut>
+                <SignedIn>
+                  <Button type="button" size="sm" className="font-semibold px-6" onClick={goToDashboard}>
+                    Dashboard
+                  </Button>
+                  <SignOutButton>
+                    <Button variant="ghost" size="sm">Sign Out</Button>
+                  </SignOutButton>
+                </SignedIn>
+              </>
+            ) : null}
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -160,16 +171,20 @@ export default function Home() {
               <Link href="#about" onClick={() => setIsMenuOpen(false)} className="block p-2 font-medium">About</Link>
               <Link href="#faq" onClick={() => setIsMenuOpen(false)} className="block p-2 font-medium">FAQ</Link>
               <div className="pt-4 border-t flex flex-col gap-3">
-                <SignedOut>
-                  <SignInButton mode="modal">
-                    <Button className="w-full">Get Started</Button>
-                  </SignInButton>
-                </SignedOut>
-                <SignedIn>
-                  <Button asChild className="w-full">
-                    <Link href="/dashboard">Dashboard</Link>
-                  </Button>
-                </SignedIn>
+                {hasMounted ? (
+                  <>
+                    <SignedOut>
+                      <SignInButton mode="modal">
+                        <Button className="w-full">Get Started</Button>
+                      </SignInButton>
+                    </SignedOut>
+                    <SignedIn>
+                      <Button type="button" className="w-full" onClick={goToDashboard}>
+                        Dashboard
+                      </Button>
+                    </SignedIn>
+                  </>
+                ) : null}
               </div>
             </motion.div>
           )}
@@ -200,22 +215,24 @@ export default function Home() {
               Understand, visualize, and maintain your code like never before. The all-in-one suite for modern developers who treat their repos as living entities.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <SignedOut>
-                <SignInButton mode="modal">
-                  <Button size="lg" className="h-14 px-10 text-lg font-bold shadow-2xl shadow-primary/30 hover:scale-105 transition-transform">
-                    Start Your Repo Journey
-                    <ChevronRight className="ml-2 size-5" />
-                  </Button>
-                </SignInButton>
-              </SignedOut>
-              <SignedIn>
-                <Button asChild size="lg" className="h-14 px-10 text-lg font-bold">
-                  <Link href="/dashboard">
-                    Go to Dashboard
-                    <ChevronRight className="ml-2 size-5" />
-                  </Link>
-                </Button>
-              </SignedIn>
+              {hasMounted ? (
+                <>
+                  <SignedOut>
+                    <SignInButton mode="modal">
+                      <Button size="lg" className="h-14 px-10 text-lg font-bold shadow-2xl shadow-primary/30 hover:scale-105 transition-transform">
+                        Start Your Repo Journey
+                        <ChevronRight className="ml-2 size-5" />
+                      </Button>
+                    </SignInButton>
+                  </SignedOut>
+                  <SignedIn>
+                    <Button type="button" size="lg" className="h-14 px-10 text-lg font-bold" onClick={goToDashboard}>
+                      Go to Dashboard
+                      <ChevronRight className="ml-2 size-5" />
+                    </Button>
+                  </SignedIn>
+                </>
+              ) : null}
               <Link href="#features">
                 <Button size="lg" variant="outline" className="h-14 px-10 text-lg bg-background/50 backdrop-blur-sm border-white/10">
                   See Features
@@ -229,35 +246,21 @@ export default function Home() {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.8 }}
-            className="mt-20 relative px-4"
+            className="relative mt-20"
           >
-            <div className="max-w-5xl mx-auto rounded-2xl border bg-card/60 backdrop-blur-xl shadow-2xl overflow-hidden group">
+            <div className="mx-auto w-full max-w-7xl overflow-hidden rounded-2xl border bg-card/60 shadow-2xl backdrop-blur-xl group">
               <div className="h-10 border-b bg-muted/20 flex items-center px-4 gap-2">
                 <div className="size-3 rounded-full bg-red-400/50"></div>
                 <div className="size-3 rounded-full bg-orange-400/50"></div>
                 <div className="size-3 rounded-full bg-green-400/50"></div>
                 <div className="ml-4 h-5 px-3 rounded bg-muted/30 text-[10px] flex items-center text-muted-foreground">askyourrepo.com/dashboard/agent</div>
               </div>
-              <div className="p-4 md:p-8 aspect-video bg-[#0d1117] relative group-hover:bg-[#161b22] transition-colors">
-                 {/* Decorative AI UI elements */}
-                 <div className="absolute top-10 left-10 p-4 border border-blue-500/30 rounded-lg bg-blue-500/5 max-w-[200px] hidden md:block">
-                    <div className="size-2 rounded-full bg-blue-500 mb-2"></div>
-                    <div className="h-2 w-full bg-white/10 rounded mb-1"></div>
-                    <div className="h-2 w-2/3 bg-white/10 rounded"></div>
-                 </div>
-                 <div className="flex flex-col items-center justify-center h-full gap-6">
-                    <div className="size-20 rounded-full bg-primary/10 flex items-center justify-center border border-primary/30 shadow-[0_0_50px_-12px_rgba(59,130,246,0.5)]">
-                       <Bot className="size-10 text-primary" />
-                    </div>
-                    <div className="space-y-2 text-center">
-                       <p className="text-zinc-400 font-mono text-xs">Analyzing c:\Users\asnoi\Downloads\gitgod\src\lib\github.ts...</p>
-                       <p className="text-white font-medium text-lg">"Adding encryption layer to token storage..."</p>
-                    </div>
-                    <div className="flex gap-3">
-                       <div className="h-8 w-24 rounded bg-green-600/20 border border-green-600/50 text-green-400 text-[10px] flex items-center justify-center font-bold">COMMIT</div>
-                       <div className="h-8 w-24 rounded bg-blue-600/20 border border-blue-600/50 text-blue-400 text-[10px] flex items-center justify-center font-bold">REVIEW</div>
-                    </div>
-                 </div>
+              <div className="aspect-video bg-[#0d1117] p-1 md:p-2">
+                <img
+                  src="/dashbaord.png"
+                  alt="Dashboard preview"
+                  className="h-full w-full rounded-lg object-contain"
+                />
               </div>
             </div>
             {/* Glossy overlay */}
@@ -354,8 +357,8 @@ export default function Home() {
                 </div>
              </div>
              {/* Floaties */}
-             <div className="absolute -top-6 -right-6 size-24 bg-background border-2 border-primary/20 rounded-2xl shadow-2xl flex items-center justify-center animate-bounce z-10">
-                <CheckCircle2 className="size-12 text-green-500" />
+             <div className="absolute -top-8 -right-8 z-10 size-28 overflow-hidden rounded-2xl border-2 border-primary/20 bg-background shadow-2xl">
+                <img src="/mascot/happy.png" alt="Happy mascot" className="h-full w-full object-cover" />
              </div>
           </div>
         </div>
@@ -394,18 +397,28 @@ export default function Home() {
                 Join hundreds of developers who are already using AI to master their code.
              </p>
              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <SignedOut>
-                  <SignInButton mode="modal">
-                    <Button size="lg" variant="secondary" className="h-14 px-12 text-lg font-bold bg-white text-primary hover:bg-white/90">
-                       Get Started Now
-                    </Button>
-                  </SignInButton>
-                </SignedOut>
-                <SignedIn>
-                  <Button asChild size="lg" variant="secondary" className="h-14 px-12 text-lg font-bold">
-                    <Link href="/dashboard">Go To Dashboard</Link>
-                  </Button>
-                </SignedIn>
+                {hasMounted ? (
+                  <>
+                    <SignedOut>
+                      <SignInButton mode="modal">
+                        <Button size="lg" variant="secondary" className="h-14 px-12 text-lg font-bold bg-white text-primary hover:bg-white/90">
+                           Get Started Now
+                        </Button>
+                      </SignInButton>
+                    </SignedOut>
+                    <SignedIn>
+                      <Button
+                        type="button"
+                        size="lg"
+                        variant="secondary"
+                        className="h-14 px-12 text-lg font-bold"
+                        onClick={goToDashboard}
+                      >
+                        Go To Dashboard
+                      </Button>
+                    </SignedIn>
+                  </>
+                ) : null}
              </div>
           </div>
         </div>
@@ -421,11 +434,7 @@ export default function Home() {
              <span className="text-lg font-display font-bold tracking-tight">Ask Your Repo</span>
           </div>
           
-          <div className="flex items-center gap-8">
-            <Link href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">Twitter</Link>
-            <Link href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">GitHub</Link>
-            <Link href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">Privacy Policy</Link>
-          </div>
+          
           
           <p className="text-sm text-muted-foreground">
             (c) {new Date().getFullYear()} Ask Your Repo. All rights reserved.

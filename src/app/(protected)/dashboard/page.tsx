@@ -100,7 +100,7 @@ const Dashboard = () => {
                   </div>
                   <div className="space-y-1">
                     <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Commits</p>
-                    <p className="text-xl font-black text-foreground">{(project as any)?._count?.commits ?? 0}</p>
+                    <p className="text-xl font-black text-foreground">{project?.commitCount ?? 0}</p>
                   </div>
                 </div>
              </div>

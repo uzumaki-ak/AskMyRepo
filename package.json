@@ -65,7 +65,6 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
-    "dotenv": "^16.4.7",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.36.0",
     "ignore": "^5.3.2",

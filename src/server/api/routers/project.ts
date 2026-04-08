@@ -119,6 +119,11 @@ export const projectRouter = createTRPCRouter({
         deletedAt: null
       },
       include: {
+        _count: {
+          select: {
+            commits: true,
+          },
+        },
         userToProjects: {
           where: { userId: ctx.user.userId! },
           select: { role: true },
@@ -128,6 +133,7 @@ export const projectRouter = createTRPCRouter({
     return projects.map(p => ({
       ...p,
       userRole: p.userToProjects[0]?.role ?? 'MEMBER',
+      commitCount: p._count.commits,
       userToProjects: undefined,
     }))
   }),
