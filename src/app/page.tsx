@@ -14,8 +14,7 @@ import {
   MessageSquare, 
   ChevronRight,
   Menu,
-  X,
-  Plus
+  X
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
@@ -130,9 +129,9 @@ export default function Home() {
               </SignInButton>
             </SignedOut>
             <SignedIn>
-              <Link href="/dashboard">
-                <Button size="sm" className="font-semibold px-6">Dashboard</Button>
-              </Link>
+              <Button asChild size="sm" className="font-semibold px-6">
+                <Link href="/dashboard">Dashboard</Link>
+              </Button>
               <SignOutButton>
                 <Button variant="ghost" size="sm">Sign Out</Button>
               </SignOutButton>
@@ -167,9 +166,9 @@ export default function Home() {
                   </SignInButton>
                 </SignedOut>
                 <SignedIn>
-                  <Link href="/dashboard" className="w-full">
-                    <Button className="w-full">Dashboard</Button>
-                  </Link>
+                  <Button asChild className="w-full">
+                    <Link href="/dashboard">Dashboard</Link>
+                  </Button>
                 </SignedIn>
               </div>
             </motion.div>
@@ -191,9 +190,6 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <Badge variant="outline" className="mb-6 py-1 px-4 border-primary/30 bg-primary/5 text-primary rounded-full animate-pulse">
-              v1.0 is now live 🚀
-            </Badge>
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-extrabold tracking-tight mb-8 leading-[1.1]">
               Your Repository. <br />
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 via-primary to-purple-500">
@@ -213,12 +209,12 @@ export default function Home() {
                 </SignInButton>
               </SignedOut>
               <SignedIn>
-                <Link href="/dashboard">
-                  <Button size="lg" className="h-14 px-10 text-lg font-bold">
+                <Button asChild size="lg" className="h-14 px-10 text-lg font-bold">
+                  <Link href="/dashboard">
                     Go to Dashboard
                     <ChevronRight className="ml-2 size-5" />
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
               </SignedIn>
               <Link href="#features">
                 <Button size="lg" variant="outline" className="h-14 px-10 text-lg bg-background/50 backdrop-blur-sm border-white/10">
@@ -406,11 +402,9 @@ export default function Home() {
                   </SignInButton>
                 </SignedOut>
                 <SignedIn>
-                  <Link href="/dashboard">
-                    <Button size="lg" variant="secondary" className="h-14 px-12 text-lg font-bold">
-                       Go To Dashboard
-                    </Button>
-                  </Link>
+                  <Button asChild size="lg" variant="secondary" className="h-14 px-12 text-lg font-bold">
+                    <Link href="/dashboard">Go To Dashboard</Link>
+                  </Button>
                 </SignedIn>
              </div>
           </div>
@@ -434,7 +428,7 @@ export default function Home() {
           </div>
           
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Ask Your Repo. All rights reserved.
+            (c) {new Date().getFullYear()} Ask Your Repo. All rights reserved.
           </p>
         </div>
       </footer>
@@ -442,14 +436,3 @@ export default function Home() {
   );
 }
 
-function Badge({ children, className, variant = "default" }: { children: React.ReactNode, className?: string, variant?: "default" | "outline" }) {
-  const variants = {
-    default: "bg-primary text-primary-foreground",
-    outline: "border border-primary/20 text-primary-foreground"
-  };
-  return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${variants[variant]} ${className}`}>
-      {children}
-    </span>
-  );
-}
