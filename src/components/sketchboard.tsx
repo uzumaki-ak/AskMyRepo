@@ -13,6 +13,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from "sonner";
 import { Badge } from "./ui/badge";
 import useProject from "~/hooks/use-project";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface SketchboardProps {
   projectId: string;
@@ -102,6 +104,7 @@ export const Sketchboard: React.FC<SketchboardProps> = ({ projectId }) => {
                     <Badge variant="outline" className="text-[10px] border-white/10 text-muted-foreground cursor-pointer hover:bg-white/5">#CODE</Badge>
                     <Badge variant="outline" className="text-[10px] border-white/10 text-muted-foreground cursor-pointer hover:bg-white/5">#LOGIC</Badge>
                   </div>
+                  <p className="text-[10px] text-muted-foreground">Markdown supported (`[link](url)`, `![img](url)`).</p>
                   <Button 
                     type="submit" 
                     disabled={addNote.isPending || !newNote.trim()}
@@ -187,9 +190,11 @@ export const Sketchboard: React.FC<SketchboardProps> = ({ projectId }) => {
                         </div>
                       ) : (
                         <div className="relative">
-                          <p className="text-sm text-foreground/80 leading-relaxed font-medium whitespace-pre-wrap break-words italic">
-                            "{note.content}"
-                          </p>
+                          <div className="prose prose-sm max-w-none text-foreground/80 dark:prose-invert prose-a:text-primary prose-code:text-primary whitespace-pre-wrap break-words">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {note.content}
+                            </ReactMarkdown>
+                          </div>
                           <div className="absolute -bottom-2 right-0 opacity-0 group-hover:opacity-20 transition-opacity">
                             <Sparkles className="w-8 h-8" />
                           </div>

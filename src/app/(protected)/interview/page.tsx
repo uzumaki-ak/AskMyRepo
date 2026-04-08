@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { api } from '~/trpc/react'
 import useProject from '~/hooks/use-project'
 import { Button } from '~/components/ui/button'
@@ -44,6 +44,36 @@ const InterviewPrepPage = () => {
     { projectId },
     { enabled: !!projectId }
   )
+  const { data: streakCommits } = api.project.getCommits.useQuery(
+    { projectId },
+    { enabled: !!projectId },
+  );
+
+  const streakDays = useMemo(() => {
+    if (!streakCommits || streakCommits.length === 0) return 0;
+
+    const dateSet = new Set(
+      streakCommits.map((commit) =>
+        new Date(commit.commitDate).toISOString().slice(0, 10),
+      ),
+    );
+
+    const cursor = new Date();
+    cursor.setHours(0, 0, 0, 0);
+
+    const todayKey = cursor.toISOString().slice(0, 10);
+    if (!dateSet.has(todayKey)) {
+      cursor.setDate(cursor.getDate() - 1);
+    }
+
+    let streak = 0;
+    while (dateSet.has(cursor.toISOString().slice(0, 10))) {
+      streak += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+
+    return streak;
+  }, [streakCommits]);
 
   const generate = api.interview.generateQuestions.useMutation({
     onSuccess: (data) => {
@@ -382,7 +412,7 @@ const InterviewPrepPage = () => {
               <CardDescription>Consistency is the mother of mastery.</CardDescription>
             </CardHeader>
             <CardContent className="relative">
-              <div className="text-4xl font-black tracking-tighter text-primary">🔥 4 DAYS</div>
+              <div className="text-4xl font-black tracking-tighter text-primary">🔥 {streakDays} DAYS</div>
               <div className="mt-2 text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Growth in progress...</div>
             </CardContent>
           </Card>

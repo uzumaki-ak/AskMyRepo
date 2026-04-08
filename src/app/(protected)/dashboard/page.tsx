@@ -15,7 +15,29 @@ import { Card, CardContent } from "~/components/ui/card";
 import { Sparkles, PencilRuler, ArrowRight } from "lucide-react";
 
 const Dashboard = () => {
-  const { project } = useProject();
+  const { project, projects } = useProject();
+
+  if (!project?.id) {
+    return (
+      <div className="rounded-xl border border-dashed border-primary/30 bg-card/30 p-10 text-center">
+        <h2 className="text-2xl font-bold tracking-tight">No project selected</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {projects && projects.length > 0
+            ? "Pick a project from the sidebar to view commits, Q&A, and analytics."
+            : "Create your first project to start indexing your repository."}
+        </p>
+        <div className="mt-6">
+          <Link
+            href="/create"
+            className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+          >
+            Create Project
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-y-4">

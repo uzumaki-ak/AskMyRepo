@@ -2,11 +2,13 @@ import { z } from "zod";
 import { createTRPCRouter, privateProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import { generateCompletion } from "~/lib/llm-service";
+import { requireProjectMembership } from "../project-access";
 
 export const historyRouter = createTRPCRouter({
   getCommits: privateProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await requireProjectMembership(ctx.db, ctx.user.userId, input.projectId);
       return await ctx.db.commit.findMany({
         where: { projectId: input.projectId },
         orderBy: { commitDate: "desc" },
@@ -20,6 +22,7 @@ export const historyRouter = createTRPCRouter({
       query: z.string() 
     }))
     .mutation(async ({ ctx, input }) => {
+      await requireProjectMembership(ctx.db, ctx.user.userId, input.projectId);
       // Search in commit messages and summaries
       const commits = await ctx.db.commit.findMany({
         where: {

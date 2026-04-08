@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, privateProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import crypto from "crypto";
+import { requireProjectMembership } from "../project-access";
 
 export const collaborationRouter = createTRPCRouter({
   inviteTeammate: privateProcedure
@@ -89,6 +90,7 @@ export const collaborationRouter = createTRPCRouter({
   getMembers: privateProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await requireProjectMembership(ctx.db, ctx.user.userId, input.projectId);
       return await ctx.db.userToProject.findMany({
         where: { projectId: input.projectId },
         include: {

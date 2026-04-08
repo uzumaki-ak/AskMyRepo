@@ -4,11 +4,13 @@ import { generateCompletion } from "~/lib/llm-service";
 import { Octokit } from "octokit";
 import { decrypt } from "~/lib/encryption";
 import { TRPCError } from "@trpc/server";
+import { requireProjectMembership } from "../project-access";
 
 export const agentRouter = createTRPCRouter({
   getProjectFiles: privateProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await requireProjectMembership(ctx.db, ctx.user.userId, input.projectId);
       return await ctx.db.sourceCodeEmbedding.findMany({
         where: { projectId: input.projectId },
         select: { fileName: true },
@@ -25,6 +27,7 @@ export const agentRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await requireProjectMembership(ctx.db, ctx.user.userId, input.projectId);
       // 1. Get project context
       let files: { fileName: string; sourceCode: string; summary: string }[] = [];
 
@@ -131,6 +134,7 @@ CRITICAL BEHAVIOR RULES:
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await requireProjectMembership(ctx.db, ctx.user.userId, input.projectId);
       // 1. Get the GitHub token for this user or project
       const project = await ctx.db.project.findUnique({
         where: { id: input.projectId },
@@ -230,6 +234,7 @@ CRITICAL BEHAVIOR RULES:
   getAiHistory: privateProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await requireProjectMembership(ctx.db, ctx.user.userId, input.projectId);
       return await ctx.db.aiChange.findMany({
         where: { projectId: input.projectId },
         orderBy: { createdAt: "desc" },

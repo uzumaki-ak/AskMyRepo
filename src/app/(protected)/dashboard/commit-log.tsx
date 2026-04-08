@@ -12,9 +12,10 @@ import { Loader2, RefreshCw, Zap, RotateCcw } from "lucide-react";
 
 const CommitLog = () => {
   const { projectId, project } = useProject();
+  const activeProjectId = project?.id ?? projectId;
   const { data: commits } = api.project.getCommits.useQuery(
-    { projectId },
-    { enabled: !!projectId },
+    { projectId: activeProjectId },
+    { enabled: !!activeProjectId },
   );
   const refetch = useRefetch();
   
@@ -29,8 +30,8 @@ const CommitLog = () => {
   });
 
   const handleSync = (force = false) => {
-    if (!projectId) return;
-    sync.mutate({ projectId, force });
+    if (!activeProjectId) return;
+    sync.mutate({ projectId: activeProjectId, force });
   };
 
   const resummarize = api.project.summarizeSingleCommit.useMutation({
@@ -44,8 +45,8 @@ const CommitLog = () => {
   });
 
   const handleResummarize = (commitHash: string) => {
-    if (!projectId) return;
-    resummarize.mutate({ projectId, commitHash });
+    if (!activeProjectId) return;
+    resummarize.mutate({ projectId: activeProjectId, commitHash });
   };
 
   return (
@@ -60,7 +61,7 @@ const CommitLog = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => handleSync(false)}
-                disabled={!projectId || sync.isPending}
+                disabled={!activeProjectId || sync.isPending}
                 className="h-8 border-primary/20 bg-background/50"
             >
                 {sync.isPending && !sync.variables?.force ? <Loader2 className="mr-2 size-3 animate-spin" /> : <Zap className="mr-2 size-3 text-primary" />}
@@ -71,7 +72,7 @@ const CommitLog = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => handleSync(true)}
-                disabled={!projectId || sync.isPending}
+                disabled={!activeProjectId || sync.isPending}
                 className="h-8 text-orange-400 border-orange-500/20 bg-background/50 hover:bg-orange-500/10 hover:text-orange-300 transition-colors"
             >
                 {sync.isPending && sync.variables?.force ? <Loader2 className="mr-2 size-3 animate-spin" /> : <RotateCcw className="mr-2 size-3" />}

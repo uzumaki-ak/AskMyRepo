@@ -1,11 +1,13 @@
 import { z } from "zod";
 import { createTRPCRouter, privateProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
+import { requireProjectMembership } from "../project-access";
 
 export const visualizerRouter = createTRPCRouter({
   getStructure: privateProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await requireProjectMembership(ctx.db, ctx.user.userId, input.projectId);
       const project = await ctx.db.project.findUnique({
         where: { id: input.projectId },
         include: {
@@ -71,6 +73,7 @@ export const visualizerRouter = createTRPCRouter({
       diagramType: z.string()
     }))
     .mutation(async ({ ctx, input }) => {
+      await requireProjectMembership(ctx.db, ctx.user.userId, input.projectId);
       return await ctx.db.mermaidDiagram.create({
         data: {
           projectId: input.projectId,
@@ -85,6 +88,7 @@ export const visualizerRouter = createTRPCRouter({
   getDiagramHistory: privateProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await requireProjectMembership(ctx.db, ctx.user.userId, input.projectId);
       return await ctx.db.mermaidDiagram.findMany({
         where: { projectId: input.projectId },
         orderBy: { createdAt: "desc" },

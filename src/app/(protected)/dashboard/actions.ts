@@ -14,23 +14,49 @@ export async function askQuestion(question: string, projectID:string){
 const stream = createStreamableValue()
 
 const { userId } = await auth()
+if (!userId) {
+  stream.update("Please sign in to ask questions about a project.")
+  stream.done()
+  return { output: stream.value, filesRefrences: [] }
+}
+
+if (!projectID) {
+  stream.update("No project selected. Please create or select a project first.")
+  stream.done()
+  return { output: stream.value, filesRefrences: [] }
+}
+
+const membership = await db.userToProject.findUnique({
+  where: {
+    userId_projectId: {
+      userId,
+      projectId: projectID,
+    },
+  },
+  select: { projectId: true },
+})
+
+if (!membership) {
+  stream.update("You don't have access to this project.")
+  stream.done()
+  return { output: stream.value, filesRefrences: [] }
+}
+
 let preferredProvider: string | null = null
 const userApiKeys: Record<string, string> = {}
-if (userId) {
-  const [user, keys] = await Promise.all([
-    db.user.findUnique({
-      where: { id: userId },
-      select: { preferredProvider: true },
-    }),
-    db.userApiKey.findMany({
-      where: { userId, isActive: true },
-      select: { provider: true, apiKey: true },
-    }),
-  ])
-  preferredProvider = user?.preferredProvider ?? null
-  for (const key of keys) {
-    userApiKeys[key.provider] = key.apiKey
-  }
+const [user, keys] = await Promise.all([
+  db.user.findUnique({
+    where: { id: userId },
+    select: { preferredProvider: true },
+  }),
+  db.userApiKey.findMany({
+    where: { userId, isActive: true },
+    select: { provider: true, apiKey: true },
+  }),
+])
+preferredProvider = user?.preferredProvider ?? null
+for (const key of keys) {
+  userApiKeys[key.provider] = key.apiKey
 }
 
 const rawProvider =

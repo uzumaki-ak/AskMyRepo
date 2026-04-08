@@ -59,6 +59,7 @@ import { createTRPCRouter, privateProcedure, publicProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import { pollCommits, summariseCommit } from "~/lib/github";
 import { indexGithubRepo } from "~/lib/github-loader";
+import { requireProjectMembership } from "../project-access";
 
 export const projectRouter = createTRPCRouter({
   createProject: privateProcedure.input(
@@ -133,6 +134,7 @@ export const projectRouter = createTRPCRouter({
   getEmbeddingStatus: privateProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await requireProjectMembership(ctx.db, ctx.user.userId, input.projectId);
       const count = await ctx.db.sourceCodeEmbedding.count({
         where: { projectId: input.projectId },
       })
@@ -233,6 +235,7 @@ export const projectRouter = createTRPCRouter({
   getCommits: privateProcedure.input(z.object ({
     projectId : z.string()
   })).query(async ({ctx, input}) => {
+    await requireProjectMembership(ctx.db, ctx.user.userId, input.projectId);
     return await ctx.db.commit.findMany({where:  {projectId: input.projectId}})
   }),
   syncCommits: privateProcedure.input(z.object({
@@ -240,6 +243,7 @@ export const projectRouter = createTRPCRouter({
     githubToken: z.string().optional(),
     force: z.boolean().default(false)
   })).mutation(async ({ ctx, input }) => {
+    await requireProjectMembership(ctx.db, ctx.user.userId, input.projectId);
     return await pollCommits(input.projectId, input.githubToken, input.force)
   }),
   resummarizeCommits: privateProcedure.input(
@@ -249,6 +253,7 @@ export const projectRouter = createTRPCRouter({
       limit: z.number().min(1).max(50).optional(),
     })
   ).mutation(async ({ ctx, input }) => {
+    await requireProjectMembership(ctx.db, ctx.user.userId, input.projectId);
     const limit = input.limit ?? 5
     const project = await ctx.db.project.findUnique({
       where: { id: input.projectId },
@@ -383,6 +388,7 @@ export const projectRouter = createTRPCRouter({
       githubToken: z.string().optional()
     }))
     .mutation(async ({ ctx, input }) => {
+      await requireProjectMembership(ctx.db, ctx.user.userId, input.projectId);
       const project = await ctx.db.project.findUnique({
         where: { id: input.projectId },
         select: { githubUrl: true },

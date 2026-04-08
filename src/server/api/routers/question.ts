@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, privateProcedure } from "../trpc";
+import { requireProjectMembership } from "../project-access";
 
 const fileReferenceSchema = z.object({
   fileName: z.string(),
@@ -18,6 +19,7 @@ export const questionRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await requireProjectMembership(ctx.db, ctx.user.userId, input.projectId);
       const userId = ctx.user.userId;
       await ctx.db.user.upsert({
         where: { id: userId },
@@ -38,6 +40,7 @@ export const questionRouter = createTRPCRouter({
   list: privateProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await requireProjectMembership(ctx.db, ctx.user.userId, input.projectId);
       return await ctx.db.savedQuestion.findMany({
         where: {
           projectId: input.projectId,

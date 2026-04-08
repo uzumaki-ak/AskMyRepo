@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, privateProcedure } from "../trpc";
 import { generateCompletion } from "~/lib/llm-service";
 import { TRPCError } from "@trpc/server";
+import { requireProjectMembership } from "../project-access";
 
 export const reviewRouter = createTRPCRouter({
   getReview: privateProcedure
@@ -10,6 +11,7 @@ export const reviewRouter = createTRPCRouter({
       fileName: z.string().optional()
     }))
     .mutation(async ({ ctx, input }) => {
+      await requireProjectMembership(ctx.db, ctx.user.userId, input.projectId);
       // 1. Get Context
       const files = await ctx.db.sourceCodeEmbedding.findMany({
         where: { 
@@ -54,6 +56,7 @@ export const reviewRouter = createTRPCRouter({
   getBlindspots: privateProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await requireProjectMembership(ctx.db, ctx.user.userId, input.projectId);
       const summaries = await ctx.db.sourceCodeEmbedding.findMany({
         where: { projectId: input.projectId },
         select: { fileName: true, summary: true }
